@@ -1,6 +1,6 @@
 using Base.Test
 
-include("PortableGameNotation.jl")
+include("../src/PortableGameNotation.jl")
 using PortableGameNotation
 
 g = readpgn("test.pgn")
