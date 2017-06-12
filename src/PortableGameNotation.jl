@@ -4,7 +4,8 @@ module PortableGameNotation
 import Base.repr, Base.length
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
-  whiteelo, blackelo, eventdate, eco, movetext, plycount, length
+  whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
+  headerstring, repr
 
 type Game
   header::Dict{String, String}
@@ -16,7 +17,7 @@ REQUIRED_TAGS = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
 DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
 
-function Base.repr(g::Game)
+function headerstring(g::Game)
   s = String[]
   # tags required by standard must be printed first and in order
   for t in REQUIRED_TAGS
@@ -27,11 +28,28 @@ function Base.repr(g::Game)
       push!(s, "[$k \"$(g.header[k])\"]\n")
     end
   end
-  push!(s, "\n")
-  push!(s, g.movetext)
-  push!(s, "\n")
-  return join(s)
+  join(s, "")
 end
+
+function movestring(g::Game; line=80)
+  moves = split(g.movetext)
+  s = String[]
+  n = 0
+  for m in moves
+    push!(s, m)
+    push!(s, " ")
+    n += length(m) + 1
+    if n >= line
+      push!(s, "\n")
+      n = 0
+    end
+  end
+  join(s, "")
+end
+
+Base.repr(g::Game) = headerstring(g) * "\n" * movestring(g)
+
+println(g::Game) = println(repr(g))
 
 
 function length(g::Game)
