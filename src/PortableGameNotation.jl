@@ -1,10 +1,10 @@
 
 module PortableGameNotation
 
-import Base.repr
+import Base.repr, Base.length
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
-  whiteelo, blackelo, eventdate, eco, movetext, plycount
+  whiteelo, blackelo, eventdate, eco, movetext, plycount, length
 
 type Game
   header::Dict{String, String}
@@ -43,7 +43,7 @@ end
 
 function validate(g::Game)
   for t in REQUIRED_TAGS
-    if !(t in g.header)
+    if !(t in keys(g.header))
       return false
     end
   end

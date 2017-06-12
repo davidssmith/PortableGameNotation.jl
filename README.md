@@ -13,14 +13,14 @@ Status](https://coveralls.io/repos/github/davidssmith/PortableGameNotation.jl/ba
 ```
 julia> using PortableGameNotation
 
-julia> games = readpgn(Pkg.dir("PortableGameNotation","test/test.pgn"));
+julia> g = readpgn(Pkg.dir("PortableGameNotation","test/test.pgn"));
 
-julia> games[1].header["White"]
+julia> white(g[1])
 "Adolf Anderssen"
 
-julia> games[1].header["Black"]
+julia> black(g[1])
 "Jean Dufresne"
 
-julia> games[1].header["Result"]
+julia> result(g[1])
 "1-0"
 
