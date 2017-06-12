@@ -6,7 +6,7 @@ import Base.repr
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount
 
-mutable struct Game
+type Game
   header::Dict{String, String}
   movetext::String
 end
@@ -100,7 +100,7 @@ function readpgn(pgnfilename)
     elseif isblank(l) && state == STATE_HEADER
       state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
     elseif !isblank(l) && state == STATE_MOVES
-      push!(moves, l)
+      push!(moves, chomp(l))
     elseif isblank(l) && state == STATE_MOVES
       push!(games, Game(hdrs, join(moves, " ")))
       state = STATE_NEWGAME
