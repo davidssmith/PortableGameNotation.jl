@@ -75,6 +75,14 @@ function query(g::Game, key::String, default="?")
     return default
   end
 end
+function intquery(g::Game, key::String, default=0)
+  s = query(g, key)
+  try
+    t = parse(Int, s)
+  catch ArgumentError
+    return default
+  end
+end
 
 white(g::Game) = query(g, "White")
 black(g::Game) = query(g, "Black")
@@ -82,11 +90,11 @@ date(g::Game) = query(g, "Date")
 site(g::Game) = query(g, "Site")
 event(g::Game) = query(g, "Event")
 result(g::Game) = query(g, "Result", "*")
-whiteelo(g::Game) = query(g, "WhiteElo", 0.0)
-blackelo(g::Game) = query(g, "BlackElo", 0.0)
+whiteelo(g::Game) = intquery(g, "WhiteElo")
+blackelo(g::Game) = intquery(g, "BlackElo")
 eco(g::Game) = query(g, "ECO")
 eventdate(g::Game) = query(g, "EventDate")
-plycount(g::Game) = query(g, "PlyCount")
+plycount(g::Game) = intquery(g, "PlyCount")
 movetext(g::Game) = g.movetext
 
 
