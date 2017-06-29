@@ -1,3 +1,4 @@
+__precompile__()
 
 module PortableGameNotation
 
@@ -117,8 +118,8 @@ whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
 blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
 whitescore(g::Game) = 0.5*(intresult(g) + 1)
 blackscore(g::Game) = 0.5*(1 - intresult(g))
-whiteperfelo(g::Game) ==  intresult(g)*400 + blackelo(g)
-blackperfelo(g::Game) == -intresult(g)*400 + whiteelo(g)
+whiteperfelo(g::Game) =  intresult(g)*400 + blackelo(g)
+blackperfelo(g::Game) = -intresult(g)*400 + whiteelo(g)
 
 isdecisive(g::Game) = intresult(g) != 0
 
