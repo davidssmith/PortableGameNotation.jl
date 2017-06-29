@@ -5,7 +5,8 @@ import Base.repr, Base.length
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
-  headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore
+  headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore,
+  whiteperfelo, blackperfelo
 
 type Game
   header::Dict{String, String}
@@ -116,8 +117,10 @@ whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
 blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
 whitescore(g::Game) = 0.5*(intresult(g) + 1)
 blackscore(g::Game) = 0.5*(1 - intresult(g))
+whiteperfelo(g::Game) ==  intresult(g)*400 + blackelo(g)
+blackperfelo(g::Game) == -intresult(g)*400 + whiteelo(g)
 
-isdecisive(g::Game) = g.header["Result"] != "1/2-1/2"
+isdecisive(g::Game) = intresult(g) != 0
 
 const STATE_HEADER = 0
 const STATE_MOVES = 1
