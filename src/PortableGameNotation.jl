@@ -5,14 +5,14 @@ import Base.repr, Base.length
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
-  headerstring, repr
+  headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore
 
 type Game
   header::Dict{String, String}
   movetext::String
 end
 
-RESULT_HASH = Dict{AbstractString,Int}("1-0" => 1, "1/2-1/2" => 0, "0-1" => -1)
+RESULT_HASH = Dict{AbstractString,Int}("1-0" => 1, "1/2-1/2" => 0, "0-1" => -1, "*" => 0)
 REQUIRED_TAGS = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
 DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
@@ -97,6 +97,12 @@ eventdate(g::Game) = query(g, "EventDate")
 plycount(g::Game) = intquery(g, "PlyCount")
 movetext(g::Game) = g.movetext
 
+intresult(g::Game) = RESULT_HASH[query(g, "Result", "1/2-1/2")]
+
+whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
+blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
+whitescore(g::Game) = 0.5*(intresult(g) + 1)
+blackscore(g::Game) = 0.5*(1 - intresult(g))
 
 isdecisive(g::Game) = g.header["Result"] != "1/2-1/2"
 
@@ -106,14 +112,14 @@ const STATE_NEWGAME = 2
 
 isblank(line) = all(isspace, line)
 
-function readpgn(pgnfilename)
+function readpgn(pgnfilename; header=true, moves=true)
   f = open(pgnfilename,"r")
   pgn = readlines(f)
   close(f)
   games = Vector{Game}()
   #g = Game()
-  moves = String[]
-  hdrs = Dict{String,String}()
+  m = String[]
+  h = Dict{String,String}()
   state = STATE_NEWGAME
   for l in pgn
     #println("LINE> $l")
@@ -122,22 +128,24 @@ function readpgn(pgnfilename)
       fields = split(l,'\"')
       key = fields[1][2:end-1]
       val = fields[2]
-      hdrs[key] = val
+      if header
+        h[key] = val
+      end
     elseif isblank(l) && state == STATE_HEADER
       state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
-    elseif !isblank(l) && state == STATE_MOVES
-      push!(moves, chomp(l))
+    elseif !isblank(l) && state == STATE_MOVES && moves
+      push!(m, chomp(l))
     elseif isblank(l) && state == STATE_MOVES
-      push!(games, Game(hdrs, join(moves, " ")))
+      push!(games, Game(h, join(m, " ")))
       state = STATE_NEWGAME
     end
     if state == STATE_NEWGAME
-      moves = String[]
-      hdrs = Dict{String,String}()
+      m = String[]
+      h = Dict{String,String}()
     end
   end
   if state == STATE_MOVES
-    push!(games, Game(hdrs, join(moves, " ")))
+    push!(games, Game(h, join(m, " ")))
   end
   return games
 end
