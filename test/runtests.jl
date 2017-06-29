@@ -23,6 +23,12 @@ print("TESTING on test.pgn ... ")
 @test length(g[1]) == 36
 @test whiteev(g[1]) == 0.5784967523447427
 @test blackev(g[1]) == 0.42150324765525726
+@test whitescore(g[1]) == 1
+@test blackscore(g[1]) == 0
+@test whiteperfelo(g[1]) == 3069
+@test blackperfelo(g[1]) == 2324
+@test isdecisive(g[1]) == true
+
 @test PortableGameNotation.validate(g[1])
 
 
@@ -42,6 +48,11 @@ print("TESTING on test.pgn ... ")
 @test length(g[2]) == 25
 @test whiteev(g[2]) == 0.4441090388831469
 @test blackev(g[2]) == 0.5558909611168531
+@test whitescore(g[2]) == 1
+@test blackscore(g[2]) == 0
+@test whiteperfelo(g[2]) == 3212
+@test blackperfelo(g[2]) == 2373
+@test isdecisive(g[2]) == true
 @test PortableGameNotation.validate(g[2])
 
 println("PASSED")

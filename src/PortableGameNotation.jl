@@ -7,7 +7,7 @@ import Base.repr, Base.length
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
   headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore,
-  whiteperfelo, blackperfelo
+  whiteperfelo, blackperfelo, isdecisive
 
 type Game
   header::Dict{String, String}
