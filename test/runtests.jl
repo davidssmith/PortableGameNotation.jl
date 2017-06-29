@@ -7,45 +7,41 @@ g = readpgn("test.pgn")
 
 print("TESTING on test.pgn ... ")
 
-@test date(g[1]) == "1852.??.??"
-@test site(g[1]) == "Berlin GER"
-@test event(g[1]) == "Berlin GER"
+@test date(g[1]) == Date(2015,7,3)
+@test site(g[1]) == "Danzhou CHN"
+@test event(g[1]) == "6th Hainan Danzhou"
 @test result(g[1]) == "1-0"
 @test intresult(g[1]) == 1
-@test white(g[1]) == "Adolf Anderssen"
-@test black(g[1]) == "Jean Dufresne"
-@test whiteelo(g[1]) == 0
-@test blackelo(g[1]) == 0
-@test eco(g[1]) == "C52"
-@test eventdate(g[1]) == "?"
-@test plycount(g[1]) == 47
-@test movetext(g[1]) == """
-1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.b4 { Evans Gambit } Bxb4 5.c3 Ba5 6.d4 exd4 7.O-O d3 8.Qb3 Qf6 9.e5 Qg6 10.Re1 Nge7 11.Ba3 b5 12.Qxb5 Rb8 13.Qa4 Bb6 14.Nbd2 Bb7 15.Ne4 Qf5 16.Bxd3 Qh5 17.Nf6+ gxf6 18.exf6 Rg8 19.Rad1 Qxf3 20.Rxe7+ Nxe7 21.Qxd7+ Kxd7 22.Bf5+ Ke8 23.Bd7+ Kf8 24.Bxe7# 1-0"""
-@test length(g[1]) == 24
-@test whiteev(g[1]) == 0.5
-@test blackev(g[1]) == 0.5
+@test white(g[1]) == "Wei Yi"
+@test black(g[1]) == "Lazaro Bruzon Batista"
+@test whiteelo(g[1]) == 2724
+@test blackelo(g[1]) == 2669
+@test eco(g[1]) == "B40"
+@test eventdate(g[1]) == Date(2015,7,2)
+@test plycount(g[1]) == 71
+@test movetext(g[1]) == """1. e4 c5 2. Nf3 e6 3. Nc3 a6 4. Be2 Nc6 5. d4 cxd4 6. Nxd4 Qc7 7. O-O Nf6 8. Be3 Be7 9. f4 d6 10. Kh1 O-O 11. Qe1 Nxd4 12. Bxd4 b5 13. Qg3 Bb7 14. a3 Rad8 15. Rae1 Rd7 16. Bd3 Qd8 17. Qh3 g6 18. f5 e5 19. Be3 Re8 20. fxg6 hxg6 21. Nd5 Nxd5 22. Rxf7 Kxf7 23. Qh7+ Ke6 24. exd5+ Kxd5 25. Be4+ Kxe4 26. Qf7 Bf6 27. Bd2+ Kd4 28. Be3+ Ke4 29. Qb3 Kf5 30. Rf1+ Kg4 31. Qd3 Bxg2+ 32. Kxg2 Qa8+ 33. Kg1 Bg5 34. Qe2+ Kh4 35. Bf2+ Kh3 36. Be1 1-0"""
+@test length(g[1]) == 36
+@test whiteev(g[1]) == 0.5784967523447427
+@test blackev(g[1]) == 0.42150324765525726
 @test PortableGameNotation.validate(g[1])
-#@test repr(g[1]) == 
 
 
-@test date(g[2]) == "1851.06.21"
-@test site(g[2]) == "London ENG"
-@test event(g[2]) == "London"
+@test date(g[2]) == Date(2016,4,29)
+@test site(g[2]) == "St. Louis, MO USA"
+@test event(g[2]) == "Ultimate Blitz Challenge"
 @test result(g[2]) == "1-0"
 @test intresult(g[2]) == 1
-@test white(g[2]) == "Adolf Anderssen"
-@test black(g[2]) == "Lionel Adalbert Bagration Felix Kieseritzky"
-@test whiteelo(g[2]) == 0
-@test blackelo(g[2]) == 0
-@test eventdate(g[2]) == "?"
-@test eco(g[2]) == "C33"
-@test plycount(g[2]) == 45
-@test movetext(g[2]) == """
-1.e4 e5 2.f4 { King's Gambit } exf4 3.Bc4 Qh4+ 4.Kf1 b5 5.Bxb5 Nf6 6.Nf3 Qh6 7.d3 Nh5 8.Nh4 Qg5 9.Nf5 c6 10.g4 Nf6 11.Rg1 cxb5 12.h4 Qg6 13.h5 Qg5 14.Qf3 Ng8 15.Bxf4 Qf6 16.Nc3 Bc5 17.Nd5 Qxb2 18.Bd6 Bxg1 {It is from this move that Black's defeat stems. Wilhelm Steinitz suggested in 1879 that a better move would be 18... Qxa1+; likely moves to follow are 19. Ke2 Qb2 20. Kd2 Bxg1.} 19. e5 Qxa1+ 20. Ke2 Na6 21.Nxg7+ Kd8 22.Qf6+ Nxf6 23.Be7# 1-0"""
-@test length(g[2]) == 30
-@test whiteev(g[2]) == 0.5
-@test blackev(g[2]) == 0.5
+@test white(g[2]) == "Wesley So"
+@test black(g[2]) == "Garry Kasparov"
+@test whiteelo(g[2]) == 2773
+@test blackelo(g[2]) == 2812
+@test eventdate(g[2]) == Date(2016,4,28)
+@test eco(g[2]) == "A41"
+@test plycount(g[2]) == 49
+@test movetext(g[2]) == """1. Nf3 g6 2. e4 Bg7 3. d4 d6 4. c4 Bg4 5. Be2 Nc6 6. Nbd2 e5 7. d5 Nce7 8. h3 Bd7 9. c5 dxc5 10. Nc4 f6 11. d6 Nc8 12. Be3 b6 13. O-O Bc6 14. dxc7 Qxc7 15. b4 cxb4 16. Rc1 Nge7 17. Qb3 h6 18. Rfd1 b5 19. Ncxe5 fxe5 20. Bxb5 Rb8 21. Ba4 Qb7 22. Rxc6 Nxc6 23. Qe6+ Ne7 24. Bc5 Rc8 25. Bxe7 1-0"""
+@test length(g[2]) == 25
+@test whiteev(g[2]) == 0.4441090388831469
+@test blackev(g[2]) == 0.5558909611168531
 @test PortableGameNotation.validate(g[2])
-#@test repr(g[2]) ==
 
 println("PASSED")

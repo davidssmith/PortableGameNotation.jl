@@ -12,7 +12,7 @@ type Game
   movetext::String
 end
 
-RESULT_HASH = Dict{AbstractString,Int}("1-0" => 1, "1/2-1/2" => 0, "0-1" => -1, "*" => 0)
+RESULT_HASH = Dict{String,Int}("1-0" => 1, "1/2-1/2" => 0, "0-1" => -1, "*" => 0)
 REQUIRED_TAGS = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
 DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
@@ -84,16 +84,29 @@ function intquery(g::Game, key::String, default=0)
   end
 end
 
+function datequery(g::Game, key::String)
+  y, m, d = split(query(g, key),'.')
+  if contains(y, "?")
+    return Date()
+  elseif contains(m, "?")
+    return Date(parse(Int,y))
+  elseif contains(d, "?")
+    return Date(parse(Int,y), parse(Int,m))
+  else
+    return Date(parse(Int,y), parse(Int,m), parse(Int,d))
+  end
+end
+
 white(g::Game) = query(g, "White")
 black(g::Game) = query(g, "Black")
-date(g::Game) = query(g, "Date")
+date(g::Game) = datequery(g, "Date")
 site(g::Game) = query(g, "Site")
 event(g::Game) = query(g, "Event")
 result(g::Game) = query(g, "Result", "*")
 whiteelo(g::Game) = intquery(g, "WhiteElo")
 blackelo(g::Game) = intquery(g, "BlackElo")
 eco(g::Game) = query(g, "ECO")
-eventdate(g::Game) = query(g, "EventDate")
+eventdate(g::Game) = datequery(g, "EventDate")
 plycount(g::Game) = intquery(g, "PlyCount")
 movetext(g::Game) = g.movetext
 
