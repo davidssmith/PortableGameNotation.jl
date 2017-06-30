@@ -20,7 +20,9 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
 
 """
-Format the game headers according to the PGN specification.
+headerstring(g)
+
+Format the headers of game `g` according to the PGN specification.
 """
 function headerstring(g::Game)
   s = String[]
@@ -37,7 +39,9 @@ function headerstring(g::Game)
 end
 
 """
-Format the move text with wrapping and linebreaks.
+movestring(g)
+
+Format the move text of game `g` with wrapping and linebreaks.
 """
 function movestring(g::Game; line=80)
   moves = split(g.movetext)
@@ -58,7 +62,9 @@ end
 Base.repr(g::Game) = headerstring(g) * "\n" * movestring(g)
 
 """
-Number of moves in the game.
+length(g)
+
+Number of moves in the game `g`.
 """
 function length(g::Game)
   moves = split(g.movetext,".")
@@ -66,9 +72,6 @@ function length(g::Game)
   return n
 end
 
-"""
-Test whether game is valid according to PGN specification.
-"""
 function validate(g::Game)
   for t in REQUIRED_TAGS
     if !(t in keys(g.header))
@@ -109,47 +112,69 @@ function datequery(g::Game, key::String)
 end
 
 """
-Name of white player
+white(g)
+
+Name of white player in game `g`
 """
 white(g::Game) = query(g, "White")
 """
-Name of black player
+black(g)
+
+Name of black player in game `g`
 """
 black(g::Game) = query(g, "Black")
 """
-Date game was played.
+date(g)
+
+Date game `g` was played.
 """
 date(g::Game) = datequery(g, "Date")
 """
-Location where game was played.
+site(g)
+
+Location where game `g` was played.
 """
 site(g::Game) = query(g, "Site")
 """
-Name of event where game was played.
+event(g)
+
+Name of event where game `g` was played.
 """
 event(g::Game) = query(g, "Event")
 """
-Result of the game. Default is unknown, "*".
+result(g)
+
+Result of game `g`. Default is unknown, "*".
 """
 result(g::Game) = query(g, "Result", "*")
 """
-Elo rating of white player. Default is 0.
+whiteelo(g)
+
+Elo rating of white player in game `g`. Default is 0.
 """
 whiteelo(g::Game) = intquery(g, "WhiteElo")
 """
-Elo rating of black player. Default is 0.
+blackelo(g)
+
+Elo rating of black player in game `g`. Default is 0.
 """
 blackelo(g::Game) = intquery(g, "BlackElo")
 """
-ECO code for opening in the game.
+eco(g)
+
+ECO code for opening in the game `g`.
 """
 eco(g::Game) = query(g, "ECO")
 """
-Date event started in which game was played.
+eventdate(g)
+
+Date event started in which game `g` was played.
 """
 eventdate(g::Game) = datequery(g, "EventDate")
 """
-Ply count of game.
+plycount(g)
+
+Ply count of game `g`.
 """
 plycount(g::Game) = intquery(g, "PlyCount")
 
@@ -158,32 +183,46 @@ movetext(g::Game) = g.movetext
 intresult(g::Game) = RESULT_HASH[query(g, "Result", "1/2-1/2")]
 
 """
-Expected score of the white player based on Elo rating.
+whiteev(g)
+
+Expected score of the white player based on Elo rating in game `g`.
 """
 whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
 """
-Expected score of the black player based on Elo rating.
+blackev(g)
+
+Expected score of the black player based on Elo rating in game `g`.
 """
 blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
 """
-Score for white in this game, based on the result.
+whitescore(g)
+
+Score for white in game `g`, based on the result.
 """
 whitescore(g::Game) = 0.5*(intresult(g) + 1)
 """
-Score for black in this game, based on the result.
+blackscore(g)
+
+Score for black in game `g`, based on the result.
 """
 blackscore(g::Game) = 0.5*(1 - intresult(g))
 """
-Performance rating for white based on the game result.
+whiteperfelo(g)
+
+Performance rating for white based on the result in game `g`.
 """
 whiteperfelo(g::Game) =  intresult(g)*400 + blackelo(g)
 """
-Performance rating for black based on the game result.
+blackperfelo(g)
+
+Performance rating for black based on the result in game `g`.
 """
 blackperfelo(g::Game) = -intresult(g)*400 + whiteelo(g)
 
 """
-Boolean test of whether the game had a decisive result.
+isdecisive(g)
+
+Boolean test of whether game `g` had a decisive result.
 """
 isdecisive(g::Game) = intresult(g) != 0
 
@@ -194,8 +233,14 @@ const STATE_NEWGAME = 2
 isblank(line) = all(isspace, line)
 
 """
-Read a text PGN file and return an array of `Game` objects containing the 
-games in the file.
+readpgn(filename; [header=true, moves=true, verbose=false])
+
+Read games from PGN file `filename` and returns an array of `Game`
+object.
+
+If `header` or `moves` are set to false, they will, respectively, be
+ignored. This can be used to decrease memory consumption when you don't
+need the full game.
 """
 function readpgn(pgnfilename; header=true, moves=true, verbose=false)
   f = open(pgnfilename,"r")
@@ -239,6 +284,8 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
 end
 
 """
+sortpgnfile(filename)
+
 Sort the games in a PGN file. (Implementation incomplete.)
 """
 function sortpgnfile(pgnfilename, outfile)
@@ -253,6 +300,8 @@ end
 
 
 """
+browsepgn(filename)
+
 Browse the games in a PGN file, one by one.
 """
 function browsepgn(pgnfilename)
