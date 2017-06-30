@@ -16,11 +16,10 @@ julia> using PortableGameNotation
 julia> g = readpgn(Pkg.dir("PortableGameNotation","test/test.pgn"));
 
 julia> white(g[1])
-"Adolf Anderssen"
+"Wei Yi"
 
 julia> black(g[1])
-"Jean Dufresne"
+"Lazaro Bruzon Batista"
 
 julia> result(g[1])
 "1-0"
-

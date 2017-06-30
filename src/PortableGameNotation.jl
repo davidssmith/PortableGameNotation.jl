@@ -236,7 +236,7 @@ isblank(line) = all(isspace, line)
 readpgn(filename; [header=true, moves=true, verbose=false])
 
 Read games from PGN file `filename` and returns an array of `Game`
-object.
+objects.
 
 If `header` or `moves` are set to false, they will, respectively, be
 ignored. This can be used to decrease memory consumption when you don't
