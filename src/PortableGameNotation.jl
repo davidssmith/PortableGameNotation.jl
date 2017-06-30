@@ -2,7 +2,7 @@ __precompile__()
 
 module PortableGameNotation
 
-import Base.repr, Base.length
+import Base.repr, Base.length, Base.@printf
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
@@ -19,6 +19,9 @@ REQUIRED_TAGS = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
 DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
 
+"""
+Format the game headers according to the PGN specification.
+"""
 function headerstring(g::Game)
   s = String[]
   # tags required by standard must be printed first and in order
@@ -33,6 +36,9 @@ function headerstring(g::Game)
   join(s, "")
 end
 
+"""
+Format the move text with wrapping and linebreaks.
+"""
 function movestring(g::Game; line=80)
   moves = split(g.movetext)
   s = String[]
@@ -51,16 +57,18 @@ end
 
 Base.repr(g::Game) = headerstring(g) * "\n" * movestring(g)
 
-println(g::Game) = println(repr(g))
-
-
+"""
+Number of moves in the game.
+"""
 function length(g::Game)
-  # length is defined as number of moves
   moves = split(g.movetext,".")
   n = length(moves) - 1
   return n
 end
 
+"""
+Test whether game is valid according to PGN specification.
+"""
 function validate(g::Game)
   for t in REQUIRED_TAGS
     if !(t in keys(g.header))
@@ -77,6 +85,7 @@ function query(g::Game, key::String, default="?")
     return default
   end
 end
+
 function intquery(g::Game, key::String, default=0)
   s = query(g, key)
   try
@@ -99,28 +108,83 @@ function datequery(g::Game, key::String)
   end
 end
 
+"""
+Name of white player
+"""
 white(g::Game) = query(g, "White")
+"""
+Name of black player
+"""
 black(g::Game) = query(g, "Black")
+"""
+Date game was played.
+"""
 date(g::Game) = datequery(g, "Date")
+"""
+Location where game was played.
+"""
 site(g::Game) = query(g, "Site")
+"""
+Name of event where game was played.
+"""
 event(g::Game) = query(g, "Event")
+"""
+Result of the game. Default is unknown, "*".
+"""
 result(g::Game) = query(g, "Result", "*")
+"""
+Elo rating of white player. Default is 0.
+"""
 whiteelo(g::Game) = intquery(g, "WhiteElo")
+"""
+Elo rating of black player. Default is 0.
+"""
 blackelo(g::Game) = intquery(g, "BlackElo")
+"""
+ECO code for opening in the game.
+"""
 eco(g::Game) = query(g, "ECO")
+"""
+Date event started in which game was played.
+"""
 eventdate(g::Game) = datequery(g, "EventDate")
+"""
+Ply count of game.
+"""
 plycount(g::Game) = intquery(g, "PlyCount")
+
 movetext(g::Game) = g.movetext
 
 intresult(g::Game) = RESULT_HASH[query(g, "Result", "1/2-1/2")]
 
+"""
+Expected score of the white player based on Elo rating.
+"""
 whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
+"""
+Expected score of the black player based on Elo rating.
+"""
 blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
+"""
+Score for white in this game, based on the result.
+"""
 whitescore(g::Game) = 0.5*(intresult(g) + 1)
+"""
+Score for black in this game, based on the result.
+"""
 blackscore(g::Game) = 0.5*(1 - intresult(g))
+"""
+Performance rating for white based on the game result.
+"""
 whiteperfelo(g::Game) =  intresult(g)*400 + blackelo(g)
+"""
+Performance rating for black based on the game result.
+"""
 blackperfelo(g::Game) = -intresult(g)*400 + whiteelo(g)
 
+"""
+Boolean test of whether the game had a decisive result.
+"""
 isdecisive(g::Game) = intresult(g) != 0
 
 const STATE_HEADER = 0
@@ -129,17 +193,19 @@ const STATE_NEWGAME = 2
 
 isblank(line) = all(isspace, line)
 
-function readpgn(pgnfilename; header=true, moves=true)
+"""
+Read a text PGN file and return an array of `Game` objects containing the 
+games in the file.
+"""
+function readpgn(pgnfilename; header=true, moves=true, verbose=false)
   f = open(pgnfilename,"r")
-  pgn = readlines(f)
-  close(f)
   games = Vector{Game}()
-  #g = Game()
   m = String[]
   h = Dict{String,String}()
+  n = 0
   state = STATE_NEWGAME
-  for l in pgn
-    #println("LINE> $l")
+  while !eof(f)
+    l = readline(f)
     if ismatch(r"^\[", l)   # header line
       state = STATE_HEADER
       fields = split(l,'\"')
@@ -154,6 +220,10 @@ function readpgn(pgnfilename; header=true, moves=true)
       push!(m, chomp(l))
     elseif isblank(l) && state == STATE_MOVES
       push!(games, Game(h, join(m, " ")))
+      n += 1
+      if verbose
+        Base.@printf "\r%d" n
+      end
       state = STATE_NEWGAME
     end
     if state == STATE_NEWGAME
@@ -161,12 +231,16 @@ function readpgn(pgnfilename; header=true, moves=true)
       h = Dict{String,String}()
     end
   end
+  close(f)
   if state == STATE_MOVES
     push!(games, Game(h, join(m, " ")))
   end
   return games
 end
 
+"""
+Sort the games in a PGN file. (Implementation incomplete.)
+"""
 function sortpgnfile(pgnfilename, outfile)
   data = readpgn(pgnfilename)
   datasorted=sort(data, by=cpsort)
@@ -178,6 +252,9 @@ function sortpgnfile(pgnfilename, outfile)
 end
 
 
+"""
+Browse the games in a PGN file, one by one.
+"""
 function browsepgn(pgnfilename)
   data = readpgn(pgnfilename)
   datasorted = sort(data, by=cpsort)
