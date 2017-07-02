@@ -187,14 +187,15 @@ intresult(g::Game) = RESULT_HASH[query(g, "Result", "1/2-1/2")]
 whiteev(g)
 
 Expected score of the white player based on Elo rating in game `g`.
+
 """
-whiteev(g::Game) = 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / 400.0))
+whiteev(g::Game,evslope=400,ev0=0) = ev0 + 1. / (1. + 10^((blackelo(g)-whiteelo(g)) / evslope))
 """
 blackev(g)
 
 Expected score of the black player based on Elo rating in game `g`.
 """
-blackev(g::Game) = 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / 400.0))
+blackev(g::Game,evslope=400,ev0=0) = ev0 + 1. / (1. + 10^((whiteelo(g)-blackelo(g)) / evslope))
 """
 whitescore(g)
 
