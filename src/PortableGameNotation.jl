@@ -252,7 +252,7 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
   n = 0
   state = STATE_NEWGAME
   while !eof(f)
-    l = readline(f)
+    l = readline(f,chomp=false)
     if ismatch(r"^\[", l)   # header line
       state = STATE_HEADER
       fields = split(l,'\"')
@@ -264,7 +264,7 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
     elseif isblank(l) && state == STATE_HEADER
       state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
     elseif !isblank(l) && state == STATE_MOVES && moves
-      push!(m, chomp(l))
+      push!(m, l) # can't chomp because of ; and \n comment delimiters
     elseif isblank(l) && state == STATE_MOVES
       push!(games, Game(h, join(m, " ")))
       n += 1
