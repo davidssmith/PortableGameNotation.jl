@@ -2,7 +2,7 @@ __precompile__()
 
 module PortableGameNotation
 
-import Base.repr, Base.length, Base.@printf, Base.println
+import Base.show, Base.length, Base.@printf, Base.println
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
@@ -59,7 +59,9 @@ function movestring(g::Game; line=80)
   join(s, "")
 end
 
-Base.repr(g::Game) = headerstring(g) * "\n" * movestring(g)
+function Base.show(io::IO, g::Game)
+  println(io, white(g), " - ", black(g), ", ", site(g), " ", Dates.year(date(g)))
+end
 Base.println(g::Game) = Base.println(headerstring(g),"\n",movestring(g))
 
 """
