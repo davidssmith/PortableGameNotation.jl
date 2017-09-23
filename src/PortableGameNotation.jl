@@ -246,9 +246,9 @@ If `header` or `moves` are set to false, they will, respectively, be
 ignored. This can be used to decrease memory consumption when you don't
 need the full game.
 """
-function readpgn(pgnfilename; header=true, moves=true, verbose=false)
+function readpgn(pgnfilename; header=true, moves=true, verbose=false, func=false)
   f = open(pgnfilename,"r")
-  games = Vector{Game}()
+  games = Vector{Any}()
   m = String[]
   h = Dict{String,String}()
   n = 0
@@ -268,7 +268,12 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
     elseif !isblank(l) && state == STATE_MOVES && moves
       push!(m, l) # can't chomp because of ; and \n comment delimiters
     elseif isblank(l) && state == STATE_MOVES
-      push!(games, Game(h, join(m, " ")))
+      g = Game(h, join(m, " ")) 
+      if func != false
+        push!(games, func(g))
+      else
+        push!(games, g)
+      end
       n += 1
       if verbose
         Base.@printf "\r%d" n
@@ -282,7 +287,12 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
   end
   close(f)
   if state == STATE_MOVES
-    push!(games, Game(h, join(m, " ")))
+    g = Game(h, join(m, " "))
+    if func != false 
+      push!(games, func(g))
+    else
+      push!(games, g)
+    end
   end
   return games
 end
