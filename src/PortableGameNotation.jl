@@ -2,7 +2,7 @@ __precompile__()
 
 module PortableGameNotation
 
-import Base.repr, Base.length, Base.@printf, Base.println
+import Base.show, Base.length, Base.@printf, Base.println
 
 export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteelo, blackelo, eventdate, eco, movetext, plycount, length, movestring,
@@ -59,7 +59,9 @@ function movestring(g::Game; line=80)
   join(s, "")
 end
 
-Base.repr(g::Game) = headerstring(g) * "\n" * movestring(g)
+function Base.show(io::IO, g::Game)
+  println(io, white(g), " - ", black(g), ", ", site(g), " ", Dates.year(date(g)))
+end
 Base.println(g::Game) = Base.println(headerstring(g),"\n",movestring(g))
 
 """
@@ -252,7 +254,7 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
   n = 0
   state = STATE_NEWGAME
   while !eof(f)
-    l = readline(f)
+    l = readline(f,chomp=false)
     if ismatch(r"^\[", l)   # header line
       state = STATE_HEADER
       fields = split(l,'\"')
@@ -264,7 +266,7 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false)
     elseif isblank(l) && state == STATE_HEADER
       state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
     elseif !isblank(l) && state == STATE_MOVES && moves
-      push!(m, chomp(l))
+      push!(m, l) # can't chomp because of ; and \n comment delimiters
     elseif isblank(l) && state == STATE_MOVES
       push!(games, Game(h, join(m, " ")))
       n += 1
