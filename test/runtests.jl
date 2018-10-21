@@ -1,7 +1,9 @@
-using Base.Test
+
+using Test
+using Dates
 
 include("../src/PortableGameNotation.jl")
-using PortableGameNotation
+using .PortableGameNotation
 
 g = readpgn("test.pgn")
 
