@@ -1,0 +1,165 @@
+[Event "Rated Classical game"]
+[Site "https://lichess.org/RxevIgmp"]
+[Date "????.??.??"]
+[Round "?"]
+[White "delfor"]
+[Black "Romdom"]
+[Result "1-0"]
+[WhiteElo "1689"]
+[BlackElo "1657"]
+[ECO "B00"]
+[Opening "Nimzowitsch Defense: Franco-Nimzowitsch Variation"]
+[TimeControl "600+0"]
+[UTCDate "2016.10.31"]
+[UTCTime "23:00:02"]
+[Termination "Normal"]
+[WhiteRatingDiff "+10"]
+[BlackRatingDiff "-10"]
+
+1. e4 { rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 } 1...
+e6 { rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2 } 2. Nf3
+{ rnbqkbnr/pppp1ppp/4p3/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2 } 2... Nc6
+{ r1bqkbnr/pppp1ppp/2n1p3/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3 } 3. d4
+{ r1bqkbnr/pppp1ppp/2n1p3/8/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq d3 0 3 } 3...
+d5 { r1bqkbnr/ppp2ppp/2n1p3/3p4/3PP3/5N2/PPP2PPP/RNBQKB1R w KQkq d6 0 4 }
+4. Nc3 { r1bqkbnr/ppp2ppp/2n1p3/3p4/3PP3/2N2N2/PPP2PPP/R1BQKB1R b KQkq - 1
+4 } 4... dxe4 { r1bqkbnr/ppp2ppp/2n1p3/8/3Pp3/2N2N2/PPP2PPP/R1BQKB1R w KQkq
+- 0 5 } 5. Nxe4 { r1bqkbnr/ppp2ppp/2n1p3/8/3PN3/5N2/PPP2PPP/R1BQKB1R b KQkq
+- 0 5 } 5... Nf6 { r1bqkb1r/ppp2ppp/2n1pn2/8/3PN3/5N2/PPP2PPP/R1BQKB1R w
+KQkq - 1 6 } 6. Bd3 { r1bqkb1r/ppp2ppp/2n1pn2/8/3PN3/3B1N2/PPP2PPP/R1BQK2R
+b KQkq - 2 6 } 6... Nxd4 {
+r1bqkb1r/ppp2ppp/4pn2/8/3nN3/3B1N2/PPP2PPP/R1BQK2R w KQkq - 0 7 } 7. Nxf6+
+{ r1bqkb1r/ppp2ppp/4pN2/8/3n4/3B1N2/PPP2PPP/R1BQK2R b KQkq - 0 7 } 7...
+Qxf6 { r1b1kb1r/ppp2ppp/4pq2/8/3n4/3B1N2/PPP2PPP/R1BQK2R w KQkq - 0 8 } 8.
+Nxd4 { r1b1kb1r/ppp2ppp/4pq2/8/3N4/3B4/PPP2PPP/R1BQK2R b KQkq - 0 8 } 8...
+Qxd4 { r1b1kb1r/ppp2ppp/4p3/8/3q4/3B4/PPP2PPP/R1BQK2R w KQkq - 0 9 } 9.
+Bb5+ { r1b1kb1r/ppp2ppp/4p3/1B6/3q4/8/PPP2PPP/R1BQK2R b KQkq - 1 9 } 9...
+Qd7 { r1b1kb1r/pppq1ppp/4p3/1B6/8/8/PPP2PPP/R1BQK2R w KQkq - 2 10 } 10.
+Bxd7+ { r1b1kb1r/pppB1ppp/4p3/8/8/8/PPP2PPP/R1BQK2R b KQkq - 0 10 } 10...
+Bxd7 { r3kb1r/pppb1ppp/4p3/8/8/8/PPP2PPP/R1BQK2R w KQkq - 0 11 } 11. b3 {
+r3kb1r/pppb1ppp/4p3/8/8/1P6/P1P2PPP/R1BQK2R b KQkq - 0 11 } 11... O-O-O {
+2kr1b1r/pppb1ppp/4p3/8/8/1P6/P1P2PPP/R1BQK2R w KQ - 1 12 } 12. Bb2 {
+2kr1b1r/pppb1ppp/4p3/8/8/1P6/PBP2PPP/R2QK2R b KQ - 2 12 } 12... Bc6 {
+2kr1b1r/ppp2ppp/2b1p3/8/8/1P6/PBP2PPP/R2QK2R w KQ - 3 13 } 13. Qe2 {
+2kr1b1r/ppp2ppp/2b1p3/8/8/1P6/PBP1QPPP/R3K2R b KQ - 4 13 } 13... Bxg2 {
+2kr1b1r/ppp2ppp/4p3/8/8/1P6/PBP1QPbP/R3K2R w KQ - 0 14 } 14. Rg1 {
+2kr1b1r/ppp2ppp/4p3/8/8/1P6/PBP1QPbP/R3K1R1 b Q - 1 14 } 14... Bh3 {
+2kr1b1r/ppp2ppp/4p3/8/8/1P5b/PBP1QP1P/R3K1R1 w Q - 2 15 } 15. Rg3 {
+2kr1b1r/ppp2ppp/4p3/8/8/1P4Rb/PBP1QP1P/R3K3 b Q - 3 15 } 15... Bf5 {
+2kr1b1r/ppp2ppp/4p3/5b2/8/1P4R1/PBP1QP1P/R3K3 w Q - 4 16 } 16. Rd1 {
+2kr1b1r/ppp2ppp/4p3/5b2/8/1P4R1/PBP1QP1P/3RK3 b - - 5 16 } 16... Bd6 {
+2kr3r/ppp2ppp/3bp3/5b2/8/1P4R1/PBP1QP1P/3RK3 w - - 6 17 } 17. Rxg7 {
+2kr3r/ppp2pRp/3bp3/5b2/8/1P6/PBP1QP1P/3RK3 b - - 0 17 } 17... h5 {
+2kr3r/ppp2pR1/3bp3/5b1p/8/1P6/PBP1QP1P/3RK3 w - h6 0 18 } 18. Rxf7 {
+2kr3r/ppp2R2/3bp3/5b1p/8/1P6/PBP1QP1P/3RK3 b - - 0 18 } 18... Bg4 {
+2kr3r/ppp2R2/3bp3/7p/6b1/1P6/PBP1QP1P/3RK3 w - - 1 19 } 19. Qc4 {
+2kr3r/ppp2R2/3bp3/7p/2Q3b1/1P6/PBP2P1P/3RK3 b - - 2 19 } 19... Bxd1 {
+2kr3r/ppp2R2/3bp3/7p/2Q5/1P6/PBP2P1P/3bK3 w - - 0 20 } 20. Bxh8 {
+2kr3B/ppp2R2/3bp3/7p/2Q5/1P6/P1P2P1P/3bK3 b - - 0 20 } 20... Bf4 {
+2kr3B/ppp2R2/4p3/7p/2Q2b2/1P6/P1P2P1P/3bK3 w - - 1 21 } 21. Qxe6+ {
+2kr3B/ppp2R2/4Q3/7p/5b2/1P6/P1P2P1P/3bK3 b - - 0 21 } 21... Kb8 {
+1k1r3B/ppp2R2/4Q3/7p/5b2/1P6/P1P2P1P/3bK3 w - - 1 22 } 22. Be5 {
+1k1r4/ppp2R2/4Q3/4B2p/5b2/1P6/P1P2P1P/3bK3 b - - 2 22 } 22... Bd2+ {
+1k1r4/ppp2R2/4Q3/4B2p/8/1P6/P1Pb1P1P/3bK3 w - - 3 23 } 23. Kf1 {
+1k1r4/ppp2R2/4Q3/4B2p/8/1P6/P1Pb1P1P/3b1K2 b - - 4 23 } 23... Bg4 {
+1k1r4/ppp2R2/4Q3/4B2p/6b1/1P6/P1Pb1P1P/5K2 w - - 5 24 } 24. Bxc7+ {
+1k1r4/ppB2R2/4Q3/7p/6b1/1P6/P1Pb1P1P/5K2 b - - 0 24 } 24... Ka8 {
+k2r4/ppB2R2/4Q3/7p/6b1/1P6/P1Pb1P1P/5K2 w - - 1 25 } 25. Qe7 {
+k2r4/ppB1QR2/8/7p/6b1/1P6/P1Pb1P1P/5K2 b - - 2 25 } 25... Bh3+ {
+k2r4/ppB1QR2/8/7p/8/1P5b/P1Pb1P1P/5K2 w - - 3 26 } 26. Ke2 {
+k2r4/ppB1QR2/8/7p/8/1P5b/P1PbKP1P/8 b - - 4 26 } 26... Bg4+ {
+k2r4/ppB1QR2/8/7p/6b1/1P6/P1PbKP1P/8 w - - 5 27 } 27. f3 {
+k2r4/ppB1QR2/8/7p/6b1/1P3P2/P1PbK2P/8 b - - 0 27 } 1-0
+
+[Event "Rated Classical game"]
+[Site "https://lichess.org/EZfDAVfy"]
+[Date "????.??.??"]
+[Round "?"]
+[White "mobin1388"]
+[Black "rferraresi"]
+[Result "1-0"]
+[WhiteElo "1815"]
+[BlackElo "1981"]
+[ECO "B12"]
+[Opening "Caro-Kann Defense: Advance Variation"]
+[TimeControl "600+2"]
+[UTCDate "2016.10.31"]
+[UTCTime "23:00:02"]
+[Termination "Normal"]
+[WhiteRatingDiff "+16"]
+[BlackRatingDiff "-16"]
+
+1. e4 { rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1 } 1...
+c6 { rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2 } 2. d4 {
+rnbqkbnr/pp1ppppp/2p5/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2 } 2... d5 {
+rnbqkbnr/pp2pppp/2p5/3p4/3PP3/8/PPP2PPP/RNBQKBNR w KQkq d6 0 3 } 3. e5 {
+rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3 } 3... Bf5 {
+rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/8/PPP2PPP/RNBQKBNR w KQkq - 1 4 } 4. c3 {
+rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/2P5/PP3PPP/RNBQKBNR b KQkq - 0 4 } 4... e6 {
+rn1qkbnr/pp3ppp/2p1p3/3pPb2/3P4/2P5/PP3PPP/RNBQKBNR w KQkq - 0 5 } 5. Qb3 {
+rn1qkbnr/pp3ppp/2p1p3/3pPb2/3P4/1QP5/PP3PPP/RNB1KBNR b KQkq - 1 5 } 5...
+Qc7 { rn2kbnr/ppq2ppp/2p1p3/3pPb2/3P4/1QP5/PP3PPP/RNB1KBNR w KQkq - 2 6 }
+6. Na3 { rn2kbnr/ppq2ppp/2p1p3/3pPb2/3P4/NQP5/PP3PPP/R1B1KBNR b KQkq - 3 6
+} 6... Nd7 { r3kbnr/ppqn1ppp/2p1p3/3pPb2/3P4/NQP5/PP3PPP/R1B1KBNR w KQkq -
+4 7 } 7. Nf3 { r3kbnr/ppqn1ppp/2p1p3/3pPb2/3P4/NQP2N2/PP3PPP/R1B1KB1R b
+KQkq - 5 7 } 7... a5 {
+r3kbnr/1pqn1ppp/2p1p3/p2pPb2/3P4/NQP2N2/PP3PPP/R1B1KB1R w KQkq a6 0 8 } 8.
+Nh4 { r3kbnr/1pqn1ppp/2p1p3/p2pPb2/3P3N/NQP5/PP3PPP/R1B1KB1R b KQkq - 1 8 }
+8... Be4 { r3kbnr/1pqn1ppp/2p1p3/p2pP3/3Pb2N/NQP5/PP3PPP/R1B1KB1R w KQkq -
+2 9 } 9. f3 { r3kbnr/1pqn1ppp/2p1p3/p2pP3/3Pb2N/NQP2P2/PP4PP/R1B1KB1R b
+KQkq - 0 9 } 9... Bg6 {
+r3kbnr/1pqn1ppp/2p1p1b1/p2pP3/3P3N/NQP2P2/PP4PP/R1B1KB1R w KQkq - 1 10 }
+10. Nxg6 { r3kbnr/1pqn1ppp/2p1p1N1/p2pP3/3P4/NQP2P2/PP4PP/R1B1KB1R b KQkq -
+0 10 } 10... hxg6 { r3kbnr/1pqn1pp1/2p1p1p1/p2pP3/3P4/NQP2P2/PP4PP/R1B1KB1R
+w KQkq - 0 11 } 11. Bg5 {
+r3kbnr/1pqn1pp1/2p1p1p1/p2pP1B1/3P4/NQP2P2/PP4PP/R3KB1R b KQkq - 1 11 }
+11... Be7 { r3k1nr/1pqnbpp1/2p1p1p1/p2pP1B1/3P4/NQP2P2/PP4PP/R3KB1R w KQkq
+- 2 12 } 12. f4 { r3k1nr/1pqnbpp1/2p1p1p1/p2pP1B1/3P1P2/NQP5/PP4PP/R3KB1R b
+KQkq - 0 12 } 12... a4 {
+r3k1nr/1pqnbpp1/2p1p1p1/3pP1B1/p2P1P2/NQP5/PP4PP/R3KB1R w KQkq - 0 13 } 13.
+Qc2 { r3k1nr/1pqnbpp1/2p1p1p1/3pP1B1/p2P1P2/N1P5/PPQ3PP/R3KB1R b KQkq - 1
+13 } 13... Nh6 { r3k2r/1pqnbpp1/2p1p1pn/3pP1B1/p2P1P2/N1P5/PPQ3PP/R3KB1R w
+KQkq - 2 14 } 14. Bxe7 {
+r3k2r/1pqnBpp1/2p1p1pn/3pP3/p2P1P2/N1P5/PPQ3PP/R3KB1R b KQkq - 0 14 } 14...
+Kxe7 { r6r/1pqnkpp1/2p1p1pn/3pP3/p2P1P2/N1P5/PPQ3PP/R3KB1R w KQ - 0 15 }
+15. Qf2 { r6r/1pqnkpp1/2p1p1pn/3pP3/p2P1P2/N1P5/PP3QPP/R3KB1R b KQ - 1 15 }
+15... Nf5 { r6r/1pqnkpp1/2p1p1p1/3pPn2/p2P1P2/N1P5/PP3QPP/R3KB1R w KQ - 2
+16 } 16. h4 { r6r/1pqnkpp1/2p1p1p1/3pPn2/p2P1P1P/N1P5/PP3QP1/R3KB1R b KQ h3
+0 16 } 16... b5 { r6r/2qnkpp1/2p1p1p1/1p1pPn2/p2P1P1P/N1P5/PP3QP1/R3KB1R w
+KQ b6 0 17 } 17. g4 { r6r/2qnkpp1/2p1p1p1/1p1pPn2/p2P1PPP/N1P5/PP3Q2/R3KB1R
+b KQ g3 0 17 } 17... Nh6 {
+r6r/2qnkpp1/2p1p1pn/1p1pP3/p2P1PPP/N1P5/PP3Q2/R3KB1R w KQ - 1 18 } 18. h5 {
+r6r/2qnkpp1/2p1p1pn/1p1pP2P/p2P1PP1/N1P5/PP3Q2/R3KB1R b KQ - 0 18 } 18...
+Nxg4 { r6r/2qnkpp1/2p1p1p1/1p1pP2P/p2P1Pn1/N1P5/PP3Q2/R3KB1R w KQ - 0 19 }
+19. Qh4+ { r6r/2qnkpp1/2p1p1p1/1p1pP2P/p2P1PnQ/N1P5/PP6/R3KB1R b KQ - 1 19
+} 19... Ngf6 { r6r/2qnkpp1/2p1pnp1/1p1pP2P/p2P1P1Q/N1P5/PP6/R3KB1R w KQ - 2
+20 } 20. exf6+ { r6r/2qnkpp1/2p1pPp1/1p1p3P/p2P1P1Q/N1P5/PP6/R3KB1R b KQ -
+0 20 } 20... gxf6 { r6r/2qnkp2/2p1ppp1/1p1p3P/p2P1P1Q/N1P5/PP6/R3KB1R w KQ
+- 0 21 } 21. h6 { r6r/2qnkp2/2p1pppP/1p1p4/p2P1P1Q/N1P5/PP6/R3KB1R b KQ - 0
+21 } 21... b4 { r6r/2qnkp2/2p1pppP/3p4/pp1P1P1Q/N1P5/PP6/R3KB1R w KQ - 0 22
+} 22. cxb4 { r6r/2qnkp2/2p1pppP/3p4/pP1P1P1Q/N7/PP6/R3KB1R b KQ - 0 22 }
+22... Qb6 { r6r/3nkp2/1qp1pppP/3p4/pP1P1P1Q/N7/PP6/R3KB1R w KQ - 1 23 } 23.
+Nc2 { r6r/3nkp2/1qp1pppP/3p4/pP1P1P1Q/8/PPN5/R3KB1R b KQ - 2 23 } 23... Nb8
+{ rn5r/4kp2/1qp1pppP/3p4/pP1P1P1Q/8/PPN5/R3KB1R w KQ - 3 24 } 24. a3 {
+rn5r/4kp2/1qp1pppP/3p4/pP1P1P1Q/P7/1PN5/R3KB1R b KQ - 0 24 } 24... Na6 {
+r6r/4kp2/nqp1pppP/3p4/pP1P1P1Q/P7/1PN5/R3KB1R w KQ - 1 25 } 25. O-O-O {
+r6r/4kp2/nqp1pppP/3p4/pP1P1P1Q/P7/1PN5/2KR1B1R b - - 2 25 } 25... Rac8 {
+2r4r/4kp2/nqp1pppP/3p4/pP1P1P1Q/P7/1PN5/2KR1B1R w - - 3 26 } 26. Bh3 {
+2r4r/4kp2/nqp1pppP/3p4/pP1P1P1Q/P6B/1PN5/2KR3R b - - 4 26 } 26... c5 {
+2r4r/4kp2/nq2pppP/2pp4/pP1P1P1Q/P6B/1PN5/2KR3R w - - 0 27 } 27. dxc5 {
+2r4r/4kp2/nq2pppP/2Pp4/pP3P1Q/P6B/1PN5/2KR3R b - - 0 27 } 27... Nxc5 {
+2r4r/4kp2/1q2pppP/2np4/pP3P1Q/P6B/1PN5/2KR3R w - - 0 28 } 28. bxc5 {
+2r4r/4kp2/1q2pppP/2Pp4/p4P1Q/P6B/1PN5/2KR3R b - - 0 28 } 28... Qxc5 {
+2r4r/4kp2/4pppP/2qp4/p4P1Q/P6B/1PN5/2KR3R w - - 0 29 } 29. Rh2 {
+2r4r/4kp2/4pppP/2qp4/p4P1Q/P6B/1PN4R/2KR4 b - - 1 29 } 29... d4 {
+2r4r/4kp2/4pppP/2q5/p2p1P1Q/P6B/1PN4R/2KR4 w - - 0 30 } 30. f5 {
+2r4r/4kp2/4pppP/2q2P2/p2p3Q/P6B/1PN4R/2KR4 b - - 0 30 } 30... gxf5 {
+2r4r/4kp2/4pp1P/2q2p2/p2p3Q/P6B/1PN4R/2KR4 w - - 0 31 } 31. Qxd4 {
+2r4r/4kp2/4pp1P/2q2p2/p2Q4/P6B/1PN4R/2KR4 b - - 0 31 } 31... Qc7 {
+2r4r/2q1kp2/4pp1P/5p2/p2Q4/P6B/1PN4R/2KR4 w - - 1 32 } 32. Re2 {
+2r4r/2q1kp2/4pp1P/5p2/p2Q4/P6B/1PN1R3/2KR4 b - - 2 32 } 32... Rxh6 {
+2r5/2q1kp2/4pp1r/5p2/p2Q4/P6B/1PN1R3/2KR4 w - - 0 33 } 33. Bxf5 {
+2r5/2q1kp2/4pp1r/5B2/p2Q4/P7/1PN1R3/2KR4 b - - 0 33 } 33... Rhh8 {
+2r4r/2q1kp2/4pp2/5B2/p2Q4/P7/1PN1R3/2KR4 w - - 1 34 } 34. Qxa4 {
+2r4r/2q1kp2/4pp2/5B2/Q7/P7/1PN1R3/2KR4 b - - 0 34 } 34... Qf4+ {
+2r4r/4kp2/4pp2/5B2/Q4q2/P7/1PN1R3/2KR4 w - - 1 35 } 1-0
