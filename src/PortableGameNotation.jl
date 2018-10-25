@@ -1,4 +1,3 @@
-__precompile__()
 
 module PortableGameNotation
 
@@ -13,7 +12,10 @@ export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteperfelo, blackperfelo, isdecisive
 
 mutable struct Move
+  number::Int16
+  side::Int8
   san::String
+  #nag::UInt8
   comment::String
 end
 mutable struct Game
@@ -26,11 +28,17 @@ REQUIRED_TAGS = ["Event", "Site", "Date", "Round", "White", "Black", "Result"]
 DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
   "Black"=>"","Result"=>"")
 
-const STATE_NUMERIC = 0     # currently reading a move number
+const SIDE_WHITE = 0
+const SIDE_BLACK = 1
+
+const STATE_MOVE_NUMBER = 0     # currently reading a move number
 const STATE_WHITE_MOVE = 1 # currently reading a white move
 const STATE_BLACK_MOVE = 2
 const STATE_COMMENT = 3    # currently reading a comment
-const STATE_SPACE = 4      # in between a move and a move or a comment
+const STATE_PERIOD = 4     # 1-3 periods after a move number
+const STATE_SPACE = 5      # in between a move and a move or a comment
+const STATE_NAG = 6        # numeric annotation glyph
+
 
 function Game(header::Dict{String, String}, movetext::String; skim=false)
   # This is an alternative constructor that performs a state-based
@@ -39,79 +47,136 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
   # skim=true will skip move parsing and just return a Game object
   # with headers as quickly as possible for cases in which you don't
   # care about the moves
+  # TODO:
+  #   - deal with precomments
+  #   - deal with NAGS
+  #   - deal with leading ...
+  # COMMENTS
+  # Comments are inserted by either a ; (a comment that continues
+  # to the end of the line) or a { (which continues until a matching }).
+  # Comments do not nest.
   movelist = Move[]
-  if !skim
-    prevstate = -1
-    state = STATE_NUMERIC
-    startidx = 0   # indices of substring to use next
-    current_move = ""        # current move text
-    current_comment = ""     # current comment text
-    #states = zeros(Int8, length(movetext))
-    for k in 1:length(movetext)  # TODO: deal with pre-comments
-      if movetext[k] == '*' # indeterminate result, all other results will be during STATE_NUMERIC
+  if skim
+    return Game(header, movelist)
+  end
+  move_number = 1
+  prevstate = -1
+  nextstate = -1
+  sidetomove = SIDE_WHITE
+  state = STATE_MOVE_NUMBER
+  startidx = 0   # indices of substring to use next
+  current_move = ""        # current move text
+  current_comment = ""     # current comment text
+  comment_depth = 0        # level of nested comments
+  #states = zeros(Int8, length(movetext))
+  for k in 1:length(movetext)
+    if state == STATE_MOVE_NUMBER
+      if movetext[k] == '.' # end of move number
+        prevstate = state
+        state = STATE_PERIOD
+      elseif movetext[k] == '/' # reached a drawn result
+        break  # TODO: use this for validation
+      elseif movetext[k] == '-' # reached a decisive result
+        break  # TODO: use this for validation
+      end
+    elseif state == STATE_PERIOD
+      if movetext[k] == '.'  # must precede a black move
+        nextstate = STATE_BLACK_MOVE
+      elseif movetext[k] == ' '
+        continue
+      else # move next
+        prevstat = STATE_PERIOD
+        startidx = k
+        if nextstate == STATE_BLACK_MOVE
+          state = nextstate
+          nextstate = -1
+        else
+          state = STATE_WHITE_MOVE
+        end
+      end
+    elseif state == STATE_SPACE
+      if movetext[k] == ' '
+        continue  # skip spaces, not important for decisions
+      elseif movetext[k] == '{'   # start of comment string
+        comment_depth = 1
+        startidx = k+1
+        prevstate = state
+        state = STATE_COMMENT
+      elseif movetext[k] == '$'
+        startidx = k+1
+        prevstate = state
+        state = STATE_NAG
+      elseif movetext[k] == '*' # indeterminate result, all other results will be during STATE_MOVE_NUMBER
         break # done processing
-      elseif state == STATE_NUMERIC
-       if movetext[k] == '.' # end of move number
-         prevstate = state
-         state = STATE_WHITE_MOVE
-         startidx = -1
-       elseif movetext[k] == '/' # reached a drawn result
-         break  # done processing
-       elseif movetext[k] == '-' # reached a decisive result
-         break  # done processing
-       end
-      elseif state == STATE_SPACE
-        if movetext[k] == ' '
-          continue  # skip consecutive spaces
-        elseif movetext[k] == '{'   # start of comment string
-          startidx = k+1
+      elseif isdigit(movetext[k]) # start of a move number
+        prevstate = state
+        state = STATE_MOVE_NUMBER
+      else # movetext[k] != '{'   # start of a move
+        if sidetomove == SIDE_WHITE # no comment on this move
+          push!(movelist, Move(move_number, SIDE_WHITE, current_move, current_comment))
+          println(movelist)
           prevstate = state
-          state = STATE_COMMENT
-        else # movetext[k] != '{'   # start of a move
-          if prevstate == STATE_WHITE_MOVE # no comment on this move
-            push!(movelist, Move(current_move, current_comment))
-            prevstate = state
-            state = STATE_BLACK_MOVE
-            startidx = k
-          elseif prevstate == STATE_BLACK_MOVE
-            push!(movelist, Move(current_move, current_comment))
-            prevstate = state
-            state = STATE_NUMERIC
-          else
-            @info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
-          end
-          current_comment = ""
-        end
-      elseif state == STATE_WHITE_MOVE
-        if movetext[k] == ' ' && startidx != -1
-          # end of white move, next either comment or black move
-          prevstate = state
-          state = STATE_SPACE
-          current_move = chomp(movetext[startidx:k-1])
-        elseif movetext[k] != ' ' && startidx == -1
+          state = STATE_BLACK_MOVE
           startidx = k
+          sidetomove = SIDE_BLACK
+        elseif sidetomove == SIDE_BLACK
+          push!(movelist, Move(move_number, SIDE_BLACK, current_move, current_comment))
+          move_number += 1
+          prevstate = state
+          state = STATE_MOVE_NUMBER
+          sidetomove = SIDE_WHITE
+        else
+          @info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
+          @info "movetext" movetext
+          exit(1)
         end
-      elseif state == STATE_BLACK_MOVE && movetext[k] == ' '
+        current_comment = ""
+      end
+    elseif state == STATE_WHITE_MOVE
+      if movetext[k] == ' ' && startidx != -1
+        # end of white move, next either comment or black move
+        prevstate = state
+        state = STATE_SPACE
+        current_move = chomp(movetext[startidx:k-1])
+      elseif movetext[k] != ' ' && startidx == -1
+        startidx = k
+      end
+    elseif state == STATE_BLACK_MOVE
+      if movetext[k] == ' '
         # end of black move, next either comment or move number
         current_move = chomp(movetext[startidx:k-1])
         prevstate = state
         state = STATE_SPACE
-      elseif state == STATE_COMMENT && movetext[k] == '}' # end of comment string
+      end
+    elseif state == STATE_COMMENT
+      if movetext[k] == '}' # end of comment string
+        comment_depth -= 1
+      elseif movetext[k] == '{'
+        comment_depth += 1
+      end
+      if comment_depth == 0
         current_comment = movetext[startidx:k-1]
+        state = STATE_SPACE
+      end
+    elseif state == STATE_NAG
+      if movetext[k] == ' '
+        current_nag = parse(Int, movetext[startidx:k-1])
         prevstate = state
         state = STATE_SPACE
-      else
-        #@info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
       end
-       #idxs = findnext(r"\{.*?\}", s, curr_pos)
-      #states[k] = state
+    else
+      #@info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
     end
+     #idxs = findnext(r"\{.*?\}", s, curr_pos)
+    #states[k] = state
   end
   #println(header)
   #println("MOVELIST>\n", movelist)
   #println(movetext)
   #println(join(states,""))
-  return Game(header, movelist)
+  g= Game(header, movelist)
+  println(g)
+  return g
 end
 
 """
@@ -140,36 +205,62 @@ Format the move text of game `g` with wrapping and linebreaks.
 """
 function movestring(g::Game; line=80, comments=true)
   output = String[]
-  nchar_on_line = 0
+  linelen = 0
   ply = 0
   for m in g.moves
     if ply % 2 == 0
-        push!(output, "$(div(ply,2)+1). ")
+      str ="$(div(ply,2)+1)."
+      linelen += length(str)
+      push!(output, str)
     end
-    push!(output, "$(m.san) ")
-    if comments
-        push!(output, "$(m.comment) ")
+    linelen += length(m.san) + 1
+    push!(output, "$(m.san) ") # TODO: avoid string interp?
+    if linelen >= line
+        push!(output, "\n")
+        linelen = 0
+    end
+    if comments && m.comment != ""
+      linelen += length(m.comment) + 1
+      push!(output, m.comment)
+      if linelen >= line
+        push!(output, "\n")
+        linelen = 0
+      else
+        push!(output, " ")
+      # TODO: wrap comments
+      end
     end
     ply += 1
   end
-  join(s, "")
+  join(output, "")
 end
 
+function Base.repr(mime, m::Move)
+  if m.side == SIDE_WHITE && m.comment == ""
+    return "$(m.number)."*m.san
+  elseif m.side == SIDE_WHITE && m.comment != ""
+    return "$(M.number)."*m.san*" "*m.comment
+  elseif m.comment == ""
+    return m.san
+  else
+    return m.san*" "*m.comment
+  end
+end
 function Base.show(io::IO, g::Game)
   println(io, white(g), " - ", black(g), ", ", site(g), " ", Dates.year(date(g)))
 end
-Base.println(g::Game) = Base.println(headerstring(g),"\n",movestring(g))
+function Base.println(g::Game)
+    Base.println(headerstring(g))
+    Base.println(movestring(g), "\n")
+end
 
+plycount(g::Game) = length(g.moves)
 """
 length(g)
 
 Number of moves in the game `g`.
 """
-function length(g::Game)
-  moves = split(g.movetext,".")
-  n = length(moves) - 1
-  return n
-end
+length(g::Game) = div(plycount(g), 2) + 1
 
 function validate(g::Game)
   for t in REQUIRED_TAGS
@@ -350,7 +441,7 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false, func=false
   n = 0
   state = STATE_NEWGAME
   while !eof(f)
-    l = readline(f,keep=true)
+    l = readline(f,keep=false)
     if occursin(r"^\[", l)   # header line
       state = STATE_HEADER
       fields = split(l,'\"')
@@ -438,4 +529,12 @@ function browsepgn(pgnfilename)
 end
 
 
+function main()
+  games = readpgn(ARGS[1])
+  for g in games
+    println(g)
+  end
+end
+
+PROGRAM_FILE == "PortableGameNotation.jl" && main()
 end
