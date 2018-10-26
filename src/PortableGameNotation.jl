@@ -31,15 +31,17 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
 const SIDE_WHITE = 0
 const SIDE_BLACK = 1
 
-const STATE_MOVE_NUMBER = 0  # currently reading a move number
-const STATE_MOVE = 1         # currently reading a move
-const STATE_COMMENT = 2      # currently reading a comment
-const STATE_PERIOD = 3       # 1-3 periods after a move number
-const STATE_SPACE = 4        # in between a move and a move or a comment
-const STATE_NAG = 5          # numeric annotation glyph
+const STATE_HEADER_TAG = 0
+const STATE_HEADER_VALUE = 1
+const STATE_MOVE_NUMBER = 2  # currently reading a move number
+const STATE_MOVE = 3         # currently reading a move
+const STATE_COMMENT = 4      # currently reading a comment
+const STATE_PERIOD = 5       # 1-3 periods after a move number
+const STATE_SPACE = 6        # in between a move and a move or a comment
+const STATE_NAG = 7          # numeric annotation glyph
 
 
-function Game(header::Dict{String, String}, movetext::String; skim=false)
+function readpgn(filename::String; skim=false)
   # This is an alternative constructor that performs a state-based
   # single scan of the move text to parse into Move objects, hopefully
   # as quickly and efficiently as possible
@@ -50,20 +52,21 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
   #   - deal with precomments
   #   - deal with NAGS
   #   - deal with leading ...
+  #   - deal with ; moves
   # COMMENTS
   # Comments are inserted by either a ; (a comment that continues
   # to the end of the line) or a { (which continues until a matching }).
   # Comments do not nest.
   movelist = Move[]
-  if skim
-    return Game(header, movelist)
-  end
+  headers = Dict{String,String}()
   move_number = 1
   prevstate = -1
   nextstate = -1
   sidetomove = SIDE_WHITE
   state = STATE_MOVE_NUMBER
   startidx = 0   # indices of substring to use next
+  current_header_tag = ""
+  current_header_value = ""
   current_move = ""        # current move text
   current_comment = ""     # current comment text
   current_move_number = 0
@@ -79,6 +82,29 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
         break  # TODO: use this for validation
       elseif movetext[k] == '-' # reached a decisive result
         break  # TODO: use this for validation
+      elseif movetext[k] == '['
+        prevstate = STATE_NULL
+        state = STATE_HEADER_TAG
+        startidx = k+1
+      end
+    elseif state == STATE_HEADER_TAG
+      if movetext[k] == ' '   # end of header tag
+        current_header_tag = movetext[startidx:k-1]
+        prevstate = STATE_HEADER_TAG
+        state = STATE_HEADER_VALUE
+        startidx = -1
+      end
+    elseif state == STATE_HEADER_VALUE
+      if movetext[k] == '"'
+        if startidx == -1
+          startidx = k+1
+        else
+          current_header_value = movetext[startidx:k-1]
+          headers[current_header_tag] = current_header_value
+        end
+      elseif movetext[k] == ']'
+        prevstate = state
+        state = STATE_MOVE_NUMBER
       end
     elseif state == STATE_PERIOD
       if movetext[k] == '.'  # must precede a black move
@@ -157,13 +183,7 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
     else
       #@info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
     end
-     #idxs = findnext(r"\{.*?\}", s, curr_pos)
-    #states[k] = state
   end
-  #println(header)
-  #println("MOVELIST>\n", movelist)
-  #println(movetext)
-  #println(join(states,""))
   g= Game(header, movelist)
   return g
 end
