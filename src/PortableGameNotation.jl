@@ -31,13 +31,12 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
 const SIDE_WHITE = 0
 const SIDE_BLACK = 1
 
-const STATE_MOVE_NUMBER = 0     # currently reading a move number
-const STATE_WHITE_MOVE = 1 # currently reading a white move
-const STATE_BLACK_MOVE = 2
-const STATE_COMMENT = 3    # currently reading a comment
-const STATE_PERIOD = 4     # 1-3 periods after a move number
-const STATE_SPACE = 5      # in between a move and a move or a comment
-const STATE_NAG = 6        # numeric annotation glyph
+const STATE_MOVE_NUMBER = 0  # currently reading a move number
+const STATE_MOVE = 1         # currently reading a move
+const STATE_COMMENT = 2      # currently reading a comment
+const STATE_PERIOD = 3       # 1-3 periods after a move number
+const STATE_SPACE = 4        # in between a move and a move or a comment
+const STATE_NAG = 5          # numeric annotation glyph
 
 
 function Game(header::Dict{String, String}, movetext::String; skim=false)
@@ -67,6 +66,7 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
   startidx = 0   # indices of substring to use next
   current_move = ""        # current move text
   current_comment = ""     # current comment text
+  current_move_number = 0
   comment_depth = 0        # level of nested comments
   #states = zeros(Int8, length(movetext))
   for k in 1:length(movetext)
@@ -74,6 +74,7 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
       if movetext[k] == '.' # end of move number
         prevstate = state
         state = STATE_PERIOD
+        # TODO: add this in: current_move_number = parse(Int, movetext[startidx:k-1])
       elseif movetext[k] == '/' # reached a drawn result
         break  # TODO: use this for validation
       elseif movetext[k] == '-' # reached a decisive result
@@ -81,18 +82,25 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
       end
     elseif state == STATE_PERIOD
       if movetext[k] == '.'  # must precede a black move
-        nextstate = STATE_BLACK_MOVE
+        sidetomove = SIDE_BLACK
+      elseif movetext[k] == '{'  # comment next
+        prevstate = state
+        state = STATE_COMMENT
+        comment_depth = 1
+        startidx = k+1
       elseif movetext[k] == ' '
-        continue
-      else # move next
-        prevstat = STATE_PERIOD
-        startidx = k
-        if nextstate == STATE_BLACK_MOVE
-          state = nextstate
-          nextstate = -1
-        else
-          state = STATE_WHITE_MOVE
+        prevstate = state
+        state = STATE_SPACE
+      elseif movetext[k] != ' '     # move next
+        if current_move != ""
+          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
+          sidetomove = 1 - sidetomove
+          current_comment = ""
+          current_move = ""
         end
+        prevstate = STATE_PERIOD
+        state = STATE_MOVE
+        startidx = k
       end
     elseif state == STATE_SPACE
       if movetext[k] == ' '
@@ -111,42 +119,24 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
       elseif isdigit(movetext[k]) # start of a move number
         prevstate = state
         state = STATE_MOVE_NUMBER
+        startidx = k
       else # movetext[k] != '{'   # start of a move
-        if sidetomove == SIDE_WHITE # no comment on this move
-          push!(movelist, Move(move_number, SIDE_WHITE, current_move, current_comment))
-          println(movelist)
-          prevstate = state
-          state = STATE_BLACK_MOVE
-          startidx = k
-          sidetomove = SIDE_BLACK
-        elseif sidetomove == SIDE_BLACK
-          push!(movelist, Move(move_number, SIDE_BLACK, current_move, current_comment))
-          move_number += 1
-          prevstate = state
-          state = STATE_MOVE_NUMBER
-          sidetomove = SIDE_WHITE
-        else
-          @info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
-          @info "movetext" movetext
-          exit(1)
+        if current_move != ""
+          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
+          sidetomove = 1 - sidetomove
+          current_comment = ""
+          current_move = ""
         end
-        current_comment = ""
-      end
-    elseif state == STATE_WHITE_MOVE
-      if movetext[k] == ' ' && startidx != -1
-        # end of white move, next either comment or black move
         prevstate = state
-        state = STATE_SPACE
-        current_move = chomp(movetext[startidx:k-1])
-      elseif movetext[k] != ' ' && startidx == -1
+        state = STATE_MOVE
         startidx = k
       end
-    elseif state == STATE_BLACK_MOVE
-      if movetext[k] == ' '
-        # end of black move, next either comment or move number
-        current_move = chomp(movetext[startidx:k-1])
+    elseif state == STATE_MOVE
+      if movetext[k] == ' ' || movetext[k] == '\n'
         prevstate = state
         state = STATE_SPACE
+        current_move = chomp(movetext[startidx:k-1])
+        sidetomove = 1 - sidetomove
       end
     elseif state == STATE_COMMENT
       if movetext[k] == '}' # end of comment string
@@ -175,7 +165,6 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
   #println(movetext)
   #println(join(states,""))
   g= Game(header, movelist)
-  println(g)
   return g
 end
 
@@ -211,24 +200,28 @@ function movestring(g::Game; line=80, comments=true)
     if ply % 2 == 0
       str ="$(div(ply,2)+1)."
       linelen += length(str)
+      if linelen >= line
+        push!(output, "\n")
+        linelen = length(str)
+      end
       push!(output, str)
     end
     linelen += length(m.san) + 1
-    push!(output, "$(m.san) ") # TODO: avoid string interp?
     if linelen >= line
         push!(output, "\n")
-        linelen = 0
+        linelen = length(m.san) + 1
     end
+    push!(output, "$(m.san) ") # TODO: avoid string interp?
     if comments && m.comment != ""
       linelen += length(m.comment) + 1
-      push!(output, m.comment)
       if linelen >= line
         push!(output, "\n")
-        linelen = 0
+        linelen = length(m.comment) + 1
       else
         push!(output, " ")
       # TODO: wrap comments
       end
+      push!(output, "{$(m.comment)} ")
     end
     ply += 1
   end
@@ -433,14 +426,22 @@ If `header` or `moves` are set to false, they will, respectively, be
 ignored. This can be used to decrease memory consumption when you don't
 need the full game.
 """
-function readpgn(pgnfilename; header=true, moves=true, verbose=false, func=false)
+function readpgn(pgnfilename; header=true, moves=true, verbose=false,
+    prealloc=true)
   f = open(pgnfilename,"r")
-  games = Vector{Any}()
-  m = String[]
+  if prealloc
+    NGAMESMAX = div(filesize(pgnfilename), 500)
+  else
+    NGAMESMAX = 1
+  end
+  games = Vector{Game}(undef, NGAMESMAX)
+  NMOVESMAX = 512
+  move_text_buffer = Vector{String}(undef, NMOVESMAX)
   h = Dict{String,String}()
-  n = 0
+  ngames = 0
+  nmoves = 0
   state = STATE_NEWGAME
-  while !eof(f)
+  while !eof(f)  # TODO: read into buffer
     l = readline(f,keep=false)
     if occursin(r"^\[", l)   # header line
       state = STATE_HEADER
@@ -453,35 +454,39 @@ function readpgn(pgnfilename; header=true, moves=true, verbose=false, func=false
     elseif isblank(l) && state == STATE_HEADER
       state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
     elseif !isblank(l) && state == STATE_MOVES && moves
-      push!(m, l) # can't chomp because of ; and \n comment delimiters
+      nmoves += 1
+      move_text_buffer[nmoves] = l
+      #push!(m, l) # can't chomp because of ; and \n comment delimiters
     elseif isblank(l) && state == STATE_MOVES
-      g = Game(h, join(m, " "))
-      if func != false
-        push!(games, func(g))
+      g = Game(h, join(move_text_buffer[1:nmoves], " "))
+      ngames += 1
+      if ngames <= NGAMESMAX
+        games[ngames] = g
       else
+        @info "overflow!" ngames
         push!(games, g)
       end
-      n += 1
       if verbose
-        @printf "\r%d" n
+        @printf "\r%d" ngames
       end
       state = STATE_NEWGAME
     end
     if state == STATE_NEWGAME
-      m = String[]
+      nmoves = 0
       h = Dict{String,String}()
     end
   end
   close(f)
   if state == STATE_MOVES
-    g = Game(h, join(m, " "))
-    if func != false
-      push!(games, func(g))
+    g = Game(h, join(move_text_buffer[1:nmoves], " "))
+    ngames += 1
+    if ngames <= NGAMESMAX
+      games[ngames] = g
     else
       push!(games, g)
     end
   end
-  return games
+  return games[1:ngames]
 end
 
 """
@@ -530,7 +535,8 @@ end
 
 
 function main()
-  games = readpgn(ARGS[1])
+  games = readpgn(ARGS[1], verbose=true)
+  println("Read $(size(games)) games.")
   for g in games
     println(g)
   end
