@@ -41,7 +41,7 @@ const STATE_SPACE = 6        # in between a move and a move or a comment
 const STATE_NAG = 7          # numeric annotation glyph
 
 
-function readpgn(filename::String; skim=false)
+function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   # This is an alternative constructor that performs a state-based
   # single scan of the move text to parse into Move objects, hopefully
   # as quickly and efficiently as possible
@@ -57,6 +57,14 @@ function readpgn(filename::String; skim=false)
   # Comments are inserted by either a ; (a comment that continues
   # to the end of the line) or a { (which continues until a matching }).
   # Comments do not nest.
+  f = open(pgnfilename,"r")
+  if prealloc
+    NGAMESMAX = div(filesize(pgnfilename), 500)
+  else
+    NGAMESMAX = 1
+  end
+  games = Vector{Game}(undef, NGAMESMAX)
+  ngames = 0
   movelist = Move[]
   headers = Dict{String,String}()
   move_number = 1
@@ -71,121 +79,127 @@ function readpgn(filename::String; skim=false)
   current_comment = ""     # current comment text
   current_move_number = 0
   comment_depth = 0        # level of nested comments
-  #states = zeros(Int8, length(movetext))
-  for k in 1:length(movetext)
-    if state == STATE_MOVE_NUMBER
-      if movetext[k] == '.' # end of move number
-        prevstate = state
-        state = STATE_PERIOD
-        # TODO: add this in: current_move_number = parse(Int, movetext[startidx:k-1])
-      elseif movetext[k] == '/' # reached a drawn result
-        break  # TODO: use this for validation
-      elseif movetext[k] == '-' # reached a decisive result
-        break  # TODO: use this for validation
-      elseif movetext[k] == '['
-        prevstate = STATE_NULL
-        state = STATE_HEADER_TAG
-        startidx = k+1
+  BUFSIZ = 8192
+  text_buffer = Array{UInt8}(undef, BUFSIZ)
+  while !eof(f)
+    bytes_read = readbytes!(f, text_buffer, BUFSIZ)
+    for k in 1:bytes_read
+      if text_buffer[k] == '\n'
+        println("RET")
       end
-    elseif state == STATE_HEADER_TAG
-      if movetext[k] == ' '   # end of header tag
-        current_header_tag = movetext[startidx:k-1]
-        prevstate = STATE_HEADER_TAG
-        state = STATE_HEADER_VALUE
-        startidx = -1
-      end
-    elseif state == STATE_HEADER_VALUE
-      if movetext[k] == '"'
-        if startidx == -1
+      if state == STATE_MOVE_NUMBER
+        if text_buffer[k] == '.' # end of move number
+          prevstate = state
+          state = STATE_PERIOD
+          # TODO: add this in: current_move_number = parse(Int, text_buffer[startidx:k-1])
+        elseif text_buffer[k] == '/' # reached a drawn result
+          break  # TODO: use this for validation
+        elseif text_buffer[k] == '-' # reached a decisive result
+          break  # TODO: use this for validation
+        elseif text_buffer[k] == '['
+          prevstate = STATE_NULL
+          state = STATE_HEADER_TAG
           startidx = k+1
-        else
-          current_header_value = movetext[startidx:k-1]
-          headers[current_header_tag] = current_header_value
         end
-      elseif movetext[k] == ']'
-        prevstate = state
-        state = STATE_MOVE_NUMBER
-      end
-    elseif state == STATE_PERIOD
-      if movetext[k] == '.'  # must precede a black move
-        sidetomove = SIDE_BLACK
-      elseif movetext[k] == '{'  # comment next
-        prevstate = state
-        state = STATE_COMMENT
-        comment_depth = 1
-        startidx = k+1
-      elseif movetext[k] == ' '
-        prevstate = state
-        state = STATE_SPACE
-      elseif movetext[k] != ' '     # move next
-        if current_move != ""
-          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
+      elseif state == STATE_HEADER_TAG
+        if text_buffer[k] == ' '   # end of header tag
+          current_header_tag = text_buffer[startidx:k-1]
+          prevstate = STATE_HEADER_TAG
+          state = STATE_HEADER_VALUE
+          startidx = -1
+        end
+      elseif state == STATE_HEADER_VALUE
+        if text_buffer[k] == '"'
+          if startidx == -1
+            startidx = k+1
+          else
+            current_header_value = text_buffer[startidx:k-1]
+            headers[current_header_tag] = current_header_value
+          end
+        elseif text_buffer[k] == ']'
+          prevstate = state
+          state = STATE_MOVE_NUMBER
+        end
+      elseif state == STATE_PERIOD
+        if text_buffer[k] == '.'  # must precede a black move
+          sidetomove = SIDE_BLACK
+        elseif text_buffer[k] == '{'  # comment next
+          prevstate = state
+          state = STATE_COMMENT
+          comment_depth = 1
+          startidx = k+1
+        elseif text_buffer[k] == ' '
+          prevstate = state
+          state = STATE_SPACE
+        elseif text_buffer[k] != ' '     # move next
+          if current_move != ""
+            push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
+            sidetomove = 1 - sidetomove
+            current_comment = ""
+            current_move = ""
+          end
+          prevstate = STATE_PERIOD
+          state = STATE_MOVE
+          startidx = k
+        end
+      elseif state == STATE_SPACE
+        if text_buffer[k] == ' '
+          continue  # skip spaces, not important for decisions
+        elseif text_buffer[k] == '{'   # start of comment string
+          comment_depth = 1
+          startidx = k+1
+          prevstate = state
+          state = STATE_COMMENT
+        elseif text_buffer[k] == '$'
+          startidx = k+1
+          prevstate = state
+          state = STATE_NAG
+        elseif text_buffer[k] == '*' # indeterminate result, all other results will be during STATE_MOVE_NUMBER
+          break # done processing
+        elseif isdigit(text_buffer[k]) # start of a move number
+          prevstate = state
+          state = STATE_MOVE_NUMBER
+          startidx = k
+        else # text_buffer[k] != '{'   # start of a move
+          if current_move != ""
+            push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
+            sidetomove = 1 - sidetomove
+            current_comment = ""
+            current_move = ""
+          end
+          prevstate = state
+          state = STATE_MOVE
+          startidx = k
+        end
+      elseif state == STATE_MOVE
+        if text_buffer[k] == ' ' || text_buffer[k] == '\n'
+          prevstate = state
+          state = STATE_SPACE
+          current_move = chomp(text_buffer[startidx:k-1])
           sidetomove = 1 - sidetomove
-          current_comment = ""
-          current_move = ""
         end
-        prevstate = STATE_PERIOD
-        state = STATE_MOVE
-        startidx = k
-      end
-    elseif state == STATE_SPACE
-      if movetext[k] == ' '
-        continue  # skip spaces, not important for decisions
-      elseif movetext[k] == '{'   # start of comment string
-        comment_depth = 1
-        startidx = k+1
-        prevstate = state
-        state = STATE_COMMENT
-      elseif movetext[k] == '$'
-        startidx = k+1
-        prevstate = state
-        state = STATE_NAG
-      elseif movetext[k] == '*' # indeterminate result, all other results will be during STATE_MOVE_NUMBER
-        break # done processing
-      elseif isdigit(movetext[k]) # start of a move number
-        prevstate = state
-        state = STATE_MOVE_NUMBER
-        startidx = k
-      else # movetext[k] != '{'   # start of a move
-        if current_move != ""
-          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
-          sidetomove = 1 - sidetomove
-          current_comment = ""
-          current_move = ""
+      elseif state == STATE_COMMENT
+        if text_buffer[k] == '}' # end of comment string
+          comment_depth -= 1
+        elseif text_buffer[k] == '{'
+          comment_depth += 1
         end
-        prevstate = state
-        state = STATE_MOVE
-        startidx = k
+        if comment_depth == 0
+          current_comment = text_buffer[startidx:k-1]
+          state = STATE_SPACE
+        end
+      elseif state == STATE_NAG
+        if text_buffer[k] == ' '
+          current_nag = parse(Int, text_buffer[startidx:k-1])
+          prevstate = state
+          state = STATE_SPACE
+        end
+      else
+        #@info "UNHANDLED STATE" state k text_buffer[k] prevstate current_move current_comment
       end
-    elseif state == STATE_MOVE
-      if movetext[k] == ' ' || movetext[k] == '\n'
-        prevstate = state
-        state = STATE_SPACE
-        current_move = chomp(movetext[startidx:k-1])
-        sidetomove = 1 - sidetomove
-      end
-    elseif state == STATE_COMMENT
-      if movetext[k] == '}' # end of comment string
-        comment_depth -= 1
-      elseif movetext[k] == '{'
-        comment_depth += 1
-      end
-      if comment_depth == 0
-        current_comment = movetext[startidx:k-1]
-        state = STATE_SPACE
-      end
-    elseif state == STATE_NAG
-      if movetext[k] == ' '
-        current_nag = parse(Int, movetext[startidx:k-1])
-        prevstate = state
-        state = STATE_SPACE
-      end
-    else
-      #@info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
     end
   end
-  g= Game(header, movelist)
-  return g
+  return games[1:ngames]
 end
 
 """
@@ -446,7 +460,7 @@ If `header` or `moves` are set to false, they will, respectively, be
 ignored. This can be used to decrease memory consumption when you don't
 need the full game.
 """
-function readpgn(pgnfilename; header=true, moves=true, verbose=false,
+function readpgn_old(pgnfilename; header=true, moves=true, verbose=false,
     prealloc=true)
   f = open(pgnfilename,"r")
   if prealloc
