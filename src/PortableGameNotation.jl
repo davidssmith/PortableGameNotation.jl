@@ -11,14 +11,14 @@ export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore,
   whiteperfelo, blackperfelo, isdecisive
 
-mutable struct Move
-  number::Int16
-  side::Int8
+
+struct Move
   san::String
-  #nag::UInt8
+  nag::UInt8
   comment::String
 end
-mutable struct Game
+Move(san::String, comment::String) = Move(san, 0, comment)
+struct Game
   header::Dict{String, String}
   moves::Array{Move,1}
 end
@@ -31,15 +31,27 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
 const SIDE_WHITE = 0
 const SIDE_BLACK = 1
 
-const STATE_MOVE_NUMBER = 0  # currently reading a move number
-const STATE_MOVE = 1         # currently reading a move
-const STATE_COMMENT = 2      # currently reading a comment
-const STATE_PERIOD = 3       # 1-3 periods after a move number
-const STATE_SPACE = 4        # in between a move and a move or a comment
-const STATE_NAG = 5          # numeric annotation glyph
+const STATE_UNKNOWN = 0
+const STATE_MOVE_NUMBER = 1  # currently reading a move number
+const STATE_MOVE = 2         # currently reading a move
+const STATE_COMMENT = 3      # currently reading a comment
+const STATE_NAG = 4          # numeric annotation glyph
+const STATE_RESULT = 5
+
+move_scratch = Array{Move}(undef, 600)
 
 
-function Game(header::Dict{String, String}, movetext::String; skim=false)
+"""
+readpgn(filename; [skim=false, verbose=false])
+
+Read games from PGN file `filename` and returns an array of `Game`
+objects.
+
+If `skim` is set to true, movetexts will be ignored, making the read
+process faser and less memory intensive for cases when only header
+information is required.
+"""
+function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   # This is an alternative constructor that performs a state-based
   # single scan of the move text to parse into Move objects, hopefully
   # as quickly and efficiently as possible
@@ -49,124 +61,161 @@ function Game(header::Dict{String, String}, movetext::String; skim=false)
   # TODO:
   #   - deal with precomments
   #   - deal with NAGS
-  #   - deal with leading ...
+  #   - deal with ; comments
+  #   - implement skim
   # COMMENTS
   # Comments are inserted by either a ; (a comment that continues
   # to the end of the line) or a { (which continues until a matching }).
   # Comments do not nest.
-  movelist = Move[]
-  if skim
-    return Game(header, movelist)
+  f = open(pgnfilename,"r")
+  lines = readlines(f)
+  close(f)
+  if prealloc
+    games = Vector{Game}(undef, div(filesize(pgnfilename), 500)) # guess
+  else
+    games = Vector{Game}()
   end
-  move_number = 1
-  prevstate = -1
-  nextstate = -1
-  sidetomove = SIDE_WHITE
-  state = STATE_MOVE_NUMBER
-  startidx = 0   # indices of substring to use next
-  current_move = ""        # current move text
-  current_comment = ""     # current comment text
-  current_move_number = 0
-  comment_depth = 0        # level of nested comments
-  #states = zeros(Int8, length(movetext))
-  for k in 1:length(movetext)
-    if state == STATE_MOVE_NUMBER
-      if movetext[k] == '.' # end of move number
-        prevstate = state
-        state = STATE_PERIOD
-        # TODO: add this in: current_move_number = parse(Int, movetext[startidx:k-1])
-      elseif movetext[k] == '/' # reached a drawn result
-        break  # TODO: use this for validation
-      elseif movetext[k] == '-' # reached a decisive result
-        break  # TODO: use this for validation
+  ngamesread = 0
+  newgame = false
+  current_header = DEFAULT_HASH
+  current_movetext = ""
+  for (j, l) in enumerate(lines)
+    if length(l) == 0
+      if length(current_movetext) > 0 && length(current_header) > 0 # finished a game
+        newgame = true
       end
-    elseif state == STATE_PERIOD
-      if movetext[k] == '.'  # must precede a black move
-        sidetomove = SIDE_BLACK
-      elseif movetext[k] == '{'  # comment next
-        prevstate = state
-        state = STATE_COMMENT
-        comment_depth = 1
-        startidx = k+1
-      elseif movetext[k] == ' '
-        prevstate = state
-        state = STATE_SPACE
-      elseif movetext[k] != ' '     # move next
-        if current_move != ""
-          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
-          sidetomove = 1 - sidetomove
-          current_comment = ""
-          current_move = ""
-        end
-        prevstate = STATE_PERIOD
-        state = STATE_MOVE
-        startidx = k
+    elseif l[1] == '['
+      k, v = parse_header_line(l)
+      current_header[k] = v
+    else
+      current_movetext *= l
+    end
+    if newgame || j == length(lines)
+      moves = parse_movetext(current_movetext)
+      g = Game(current_header, moves)
+      ngamesread += 1
+      print("\r", ngamesread)
+      if ngamesread <= length(games)
+        games[ngamesread] = g
+      else
+        println("PUSHING")
+        push!(games, g)
       end
-    elseif state == STATE_SPACE
-      if movetext[k] == ' '
-        continue  # skip spaces, not important for decisions
-      elseif movetext[k] == '{'   # start of comment string
-        comment_depth = 1
-        startidx = k+1
-        prevstate = state
-        state = STATE_COMMENT
-      elseif movetext[k] == '$'
-        startidx = k+1
-        prevstate = state
-        state = STATE_NAG
-      elseif movetext[k] == '*' # indeterminate result, all other results will be during STATE_MOVE_NUMBER
-        break # done processing
-      elseif isdigit(movetext[k]) # start of a move number
-        prevstate = state
+      current_movetext = ""
+      current_header = DEFAULT_HASH
+      newgame = false
+    end
+  end
+  return games[1:ngamesread]
+end
+
+
+function parse_header_line(line::String)::Tuple{String,String}
+  # parse a PGN header line and return a (key,val) tuple
+  k1 = findfirst("[", line)[1] + 1
+  k2 = findnext(" ", line, k1)[1] - 1
+  v1 = findnext("\"", line, k2)[1] + 1
+  v2 = findnext("\"", line, v1)[1] - 1
+  return (line[k1:k2], line[v1:v2])
+end
+
+function parse_movetext(txt::String)::Array{Move,1}
+  # parse a line of movetext
+  # assumes <= 100 moves per line
+  nmoves = 0
+  state = STATE_UNKNOWN
+  current_move = ""
+  current_nag = 0
+  current_comment = ""
+  k = 1
+  #try
+  while k < length(txt)
+    if state == STATE_UNKNOWN
+      if isdigit(txt[k])
         state = STATE_MOVE_NUMBER
-        startidx = k
-      else # movetext[k] != '{'   # start of a move
-        if current_move != ""
-          push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
-          sidetomove = 1 - sidetomove
-          current_comment = ""
-          current_move = ""
-        end
-        prevstate = state
+      elseif txt[k] == '{'
+        state = STATE_COMMENT
+      elseif txt[k] == '$'
+        state = STATE_NAG
+      elseif txt[k] != ' '
         state = STATE_MOVE
-        startidx = k
+      else  # skip everything else
+        k += 1
       end
-    elseif state == STATE_MOVE
-      if movetext[k] == ' ' || movetext[k] == '\n'
-        prevstate = state
-        state = STATE_SPACE
-        current_move = chomp(movetext[startidx:k-1])
-        sidetomove = 1 - sidetomove
+    elseif state == STATE_MOVE_NUMBER
+      k += 1
+      while true
+        if isdigit(txt[k]) || txt[k] == '.'
+          k += 1
+        elseif txt[k] == '-' || txt[k] == '/'
+          state = STATE_RESULT
+          break
+        else
+          state = STATE_MOVE  # replace with ischar?
+          break
+        end
+        if k > length(txt)
+          state = STATE_RESULT
+          break
+        end
       end
     elseif state == STATE_COMMENT
-      if movetext[k] == '}' # end of comment string
-        comment_depth -= 1
-      elseif movetext[k] == '{'
-        comment_depth += 1
+      k += 1
+      comment_depth = 1
+      startidx = k
+      while comment_depth > 0
+        if txt[k] == '{'
+          comment_depth += 1
+        elseif txt[k] == '}'
+          comment_depth -= 1
+        end
+        k += 1
       end
-      if comment_depth == 0
-        current_comment = movetext[startidx:k-1]
-        state = STATE_SPACE
+      current_comment = txt[startidx:k-2]
+      state = STATE_UNKNOWN
+    elseif state == STATE_MOVE
+      if current_move != ""
+        nmoves += 1
+        move_scratch[nmoves] = Move(current_move, current_nag, current_comment)
+        current_comment = ""
       end
+      startidx = k
+      while true
+        if txt[k] == ' '
+          current_move = txt[startidx:k-1]
+          break
+        elseif k >= length(txt)
+          current_move = txt[startidx:k]
+          break
+        else
+          k += 1
+        end
+      end
+      state = STATE_UNKNOWN
     elseif state == STATE_NAG
-      if movetext[k] == ' '
-        current_nag = parse(Int, movetext[startidx:k-1])
-        prevstate = state
-        state = STATE_SPACE
+      k += 1
+      startidx = k
+      while txt[k] != ' '
+        k += 1
+        current_nag = parse(Int, txt[startidx:k])
       end
+    elseif state == STATE_RESULT
+      break
     else
-      #@info "UNHANDLED STATE" state k movetext[k] prevstate current_move current_comment
+      @info "UNHANDLED STATE" state txt k moves
     end
-     #idxs = findnext(r"\{.*?\}", s, curr_pos)
-    #states[k] = state
   end
-  #println(header)
-  #println("MOVELIST>\n", movelist)
-  #println(movetext)
-  #println(join(states,""))
-  g= Game(header, movelist)
-  return g
+  #catch BoundsError
+    #@info "BoundsError" length(txt) k txt
+    #exit(1)
+  #end
+  if current_move != ""
+    nmoves += 1
+    move_scratch[nmoves] = Move(current_move, current_nag, current_comment)
+  end
+  return move_scratch[1:nmoves]
 end
+
 
 """
 headerstring(g)
@@ -228,6 +277,9 @@ function movestring(g::Game; line=80, comments=true)
   join(output, "")
 end
 
+
+resultstring(g::Game) = g.header["Result"]
+
 function Base.repr(mime, m::Move)
   if m.side == SIDE_WHITE && m.comment == ""
     return "$(m.number)."*m.san
@@ -244,7 +296,8 @@ function Base.show(io::IO, g::Game)
 end
 function Base.println(g::Game)
     Base.println(headerstring(g))
-    Base.println(movestring(g), "\n")
+    Base.print(movestring(g), " ")
+    Base.println(resultstring(g), "\n")
 end
 
 plycount(g::Game) = length(g.moves)
@@ -282,15 +335,20 @@ function intquery(g::Game, key::String, default=0)
 end
 
 function datequery(g::Game, key::String)
-  y, m, d = split(query(g, key),'.')
-  if occursin("?", y)
-    return Date()
-  elseif occursin("?", m)
-    return Date(parse(Int,y))
-  elseif occursin("?", d)
-    return Date(parse(Int,y), parse(Int,m))
+  q = split(query(g, key),'.')
+  if length(q) < 3
+    return Dates.Date(1970,1,1)
   else
-    return Date(parse(Int,y), parse(Int,m), parse(Int,d))
+    y, m, d = q[1], q[2], q[3]
+  end
+  if occursin("?", y)
+    return Dates.Date(1970,1,1)
+  elseif occursin("?", m)
+    return Dates.Date(parse(Int,y))
+  elseif occursin("?", d)
+    return Dates.Date(parse(Int,y), parse(Int,m))
+  else
+    return Dates.Date(parse(Int,y), parse(Int,m), parse(Int,d))
   end
 end
 
@@ -416,78 +474,6 @@ const STATE_NEWGAME = 2
 
 isblank(line) = all(isspace, line)
 
-"""
-readpgn(filename; [header=true, moves=true, verbose=false])
-
-Read games from PGN file `filename` and returns an array of `Game`
-objects.
-
-If `header` or `moves` are set to false, they will, respectively, be
-ignored. This can be used to decrease memory consumption when you don't
-need the full game.
-"""
-function readpgn(pgnfilename; header=true, moves=true, verbose=false,
-    prealloc=true)
-  f = open(pgnfilename,"r")
-  if prealloc
-    NGAMESMAX = div(filesize(pgnfilename), 500)
-  else
-    NGAMESMAX = 1
-  end
-  games = Vector{Game}(undef, NGAMESMAX)
-  NMOVESMAX = 512
-  move_text_buffer = Vector{String}(undef, NMOVESMAX)
-  h = Dict{String,String}()
-  ngames = 0
-  nmoves = 0
-  state = STATE_NEWGAME
-  while !eof(f)  # TODO: read into buffer
-    l = readline(f,keep=false)
-    if occursin(r"^\[", l)   # header line
-      state = STATE_HEADER
-      fields = split(l,'\"')
-      key = fields[1][2:end-1]
-      val = fields[2]
-      if header
-        h[key] = val
-      end
-    elseif isblank(l) && state == STATE_HEADER
-      state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
-    elseif !isblank(l) && state == STATE_MOVES && moves
-      nmoves += 1
-      move_text_buffer[nmoves] = l
-      #push!(m, l) # can't chomp because of ; and \n comment delimiters
-    elseif isblank(l) && state == STATE_MOVES
-      g = Game(h, join(move_text_buffer[1:nmoves], " "))
-      ngames += 1
-      if ngames <= NGAMESMAX
-        games[ngames] = g
-      else
-        @info "overflow!" ngames
-        push!(games, g)
-      end
-      if verbose
-        @printf "\r%d" ngames
-      end
-      state = STATE_NEWGAME
-    end
-    if state == STATE_NEWGAME
-      nmoves = 0
-      h = Dict{String,String}()
-    end
-  end
-  close(f)
-  if state == STATE_MOVES
-    g = Game(h, join(move_text_buffer[1:nmoves], " "))
-    ngames += 1
-    if ngames <= NGAMESMAX
-      games[ngames] = g
-    else
-      push!(games, g)
-    end
-  end
-  return games[1:ngames]
-end
 
 """
 sortpgnfile(filename)
@@ -536,10 +522,10 @@ end
 
 function main()
   games = readpgn(ARGS[1], verbose=true)
-  println("Read $(size(games)) games.")
-  for g in games
-    println(g)
-  end
+  println("Read $(length(games)) games.")
+  #for g in games
+  #  show(g)
+  #end
 end
 
 PROGRAM_FILE == "PortableGameNotation.jl" && main()
