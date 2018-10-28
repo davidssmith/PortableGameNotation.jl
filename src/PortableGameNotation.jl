@@ -11,12 +11,13 @@ export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   headerstring, repr, intresult, whiteev, blackev, whitescore, blackscore,
   whiteperfelo, blackperfelo, isdecisive
 
-mutable struct Move
+
+struct Move
   san::String
   #nag::UInt8
   comment::String
 end
-mutable struct Game
+struct Game
   header::Dict{String, String}
   moves::Array{Move,1}
 end
@@ -29,9 +30,6 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
 const SIDE_WHITE = 0
 const SIDE_BLACK = 1
 
-const SUPER_STATE_HEADER = 0
-const SUPER_STATE_MOVES = 1
-
 const STATE_UNKNOWN = 0
 const STATE_MOVE_NUMBER = 1  # currently reading a move number
 const STATE_MOVE = 2         # currently reading a move
@@ -39,17 +37,7 @@ const STATE_COMMENT = 3      # currently reading a comment
 const STATE_NAG = 4          # numeric annotation glyph
 const STATE_RESULT = 5
 
-statetext = Dict{Int,String}()
-statetext[0] = "unknown"
-statetext[1] = "hdrtag"
-statetext[2] = "hdrval"
-statetext[3] = "move#"
-statetext[4] = "move"
-statetext[5] = "comment"
-statetext[6] = "period"
-statetext[7] = "space"
-statetext[8] = "NAG"
-
+move_scratch = Array{Move}(undef, 600)
 
 
 """
@@ -81,6 +69,7 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   f = open(pgnfilename,"r")
   lines = readlines(f)
   close(f)
+  println("Readfile")
   if prealloc
     games = Vector{Game}(undef, div(filesize(pgnfilename), 500)) # guess
   else
@@ -88,38 +77,36 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   end
   ngamesread = 0
   newgame = false
-  current_header = Dict{String,String}()
+  current_header = DEFAULT_HASH
   current_movetext = ""
-  for l in lines
+  for (j, l) in enumerate(lines)
+     #c:wqprintln("LINE> ", l)
     if length(l) == 0
-      println("BETWEEN> ", l)
       if length(current_movetext) > 0 && length(current_header) > 0 # finished a game
-        moves = parse_movetext(current_movetext)
-        g = Game(current_header, moves)
-        ngamesread += 1
-        println("PUSHING> ", g)
-        if ngamesread <= length(games)
-          games[ngamesread] = g
-        else
-          push!(games, g)
-        end
         newgame = true
       end
     elseif l[1] == '['
       k, v = parse_header_line(l)
-      println("HEADER> ", (k,v))
       current_header[k] = v
     else
       current_movetext *= l
-      #println("MOVETEXT> ", l)
     end
-    if newgame
+    if newgame || j == length(lines)
+      moves = parse_movetext(current_movetext)
+      g = Game(current_header, moves)
+      ngamesread += 1
+      if ngamesread <= length(games)
+        games[ngamesread] = g
+      else
+        println("PUSHING")
+        push!(games, g)
+      end
       current_movetext = ""
-      current_header = Dict{String,String}()
+      current_header = DEFAULT_HASH
       newgame = false
     end
   end
-  return games[ngamesread]
+  return games[1:ngamesread]
 end
 
 
@@ -135,11 +122,12 @@ end
 function parse_movetext(S::String)
   # parse a line of movetext
   # assumes <= 100 moves per line
-  moves = Move[]
+  nmoves = 0
   state = STATE_UNKNOWN
   current_move = ""
   current_comment = ""
   k = 1
+  try
   while k < length(S)
     if state == STATE_UNKNOWN
       if isdigit(S[k])
@@ -184,7 +172,8 @@ function parse_movetext(S::String)
       state = STATE_UNKNOWN
     elseif state == STATE_MOVE
       if current_move != ""
-        push!(moves, Move(current_move, current_comment))
+        nmoves += 1
+        move_scratch[nmoves] = Move(current_move, current_comment)
         current_comment = ""
       end
       startidx = k
@@ -208,10 +197,15 @@ function parse_movetext(S::String)
       @info "UNHANDLED STATE" state S k moves
     end
   end
-  if current_move != ""
-    push!(moves, Move(current_move, current_comment))
+  catch BoundsError
+    @info "BoundsError" length(S) k S
+    exit(1)
   end
-  return moves
+  if current_move != ""
+    nmoves += 1
+    move_scratch[nmoves] = Move(current_move, current_comment)
+  end
+  return move_scratch[1:nmoves]
 end
 
 
@@ -333,7 +327,12 @@ function intquery(g::Game, key::String, default=0)
 end
 
 function datequery(g::Game, key::String)
-  y, m, d = split(query(g, key),'.')
+  q = split(query(g, key),'.')
+  if length(q) < 3
+    return Dates.Date(1970,1,1)
+  else
+    y, m, d = q[1], q[2], q[3]
+  end
   if occursin("?", y)
     return Dates.Date(1970,1,1)
   elseif occursin("?", m)
@@ -516,9 +515,9 @@ end
 function main()
   games = readpgn(ARGS[1], verbose=true)
   println("Read $(length(games)) games.")
-  for g in games
-    show(g)
-  end
+  #cj.for g in games
+    #cj.show(g)
+  #cj.end
 end
 
 PROGRAM_FILE == "PortableGameNotation.jl" && main()
