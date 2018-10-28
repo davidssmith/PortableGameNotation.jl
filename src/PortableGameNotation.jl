@@ -12,8 +12,6 @@ export readpgn, writepgn, Game, event, site, date, round, white, black, result,
   whiteperfelo, blackperfelo, isdecisive
 
 mutable struct Move
-  number::Int16
-  side::Int8
   san::String
   #nag::UInt8
   comment::String
@@ -31,16 +29,39 @@ DEFAULT_HASH = Dict("Event"=>"","Site"=>"","Date"=>"","Round"=>"","White"=>"",
 const SIDE_WHITE = 0
 const SIDE_BLACK = 1
 
-const STATE_HEADER_TAG = 0
-const STATE_HEADER_VALUE = 1
-const STATE_MOVE_NUMBER = 2  # currently reading a move number
-const STATE_MOVE = 3         # currently reading a move
-const STATE_COMMENT = 4      # currently reading a comment
-const STATE_PERIOD = 5       # 1-3 periods after a move number
-const STATE_SPACE = 6        # in between a move and a move or a comment
-const STATE_NAG = 7          # numeric annotation glyph
+const SUPER_STATE_HEADER = 0
+const SUPER_STATE_MOVES = 1
+
+const STATE_UNKNOWN = 0
+const STATE_MOVE_NUMBER = 1  # currently reading a move number
+const STATE_MOVE = 2         # currently reading a move
+const STATE_COMMENT = 3      # currently reading a comment
+const STATE_NAG = 4          # numeric annotation glyph
+const STATE_RESULT = 5
+
+statetext = Dict{Int,String}()
+statetext[0] = "unknown"
+statetext[1] = "hdrtag"
+statetext[2] = "hdrval"
+statetext[3] = "move#"
+statetext[4] = "move"
+statetext[5] = "comment"
+statetext[6] = "period"
+statetext[7] = "space"
+statetext[8] = "NAG"
 
 
+
+"""
+readpgn(filename; [skim=false, verbose=false])
+
+Read games from PGN file `filename` and returns an array of `Game`
+objects.
+
+If `skim` is set to true, movetexts will be ignored, making the read
+process faser and less memory intensive for cases when only header
+information is required.
+"""
 function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   # This is an alternative constructor that performs a state-based
   # single scan of the move text to parse into Move objects, hopefully
@@ -51,156 +72,148 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   # TODO:
   #   - deal with precomments
   #   - deal with NAGS
-  #   - deal with leading ...
-  #   - deal with ; moves
+  #   - deal with ; comments
+  #   - implement skim
   # COMMENTS
   # Comments are inserted by either a ; (a comment that continues
   # to the end of the line) or a { (which continues until a matching }).
   # Comments do not nest.
   f = open(pgnfilename,"r")
+  lines = readlines(f)
+  close(f)
   if prealloc
-    NGAMESMAX = div(filesize(pgnfilename), 500)
+    games = Vector{Game}(undef, div(filesize(pgnfilename), 500)) # guess
   else
-    NGAMESMAX = 1
+    games = Vector{Game}()
   end
-  games = Vector{Game}(undef, NGAMESMAX)
-  ngames = 0
-  movelist = Move[]
-  headers = Dict{String,String}()
-  move_number = 1
-  prevstate = -1
-  nextstate = -1
-  sidetomove = SIDE_WHITE
-  state = STATE_MOVE_NUMBER
-  startidx = 0   # indices of substring to use next
-  current_header_tag = ""
-  current_header_value = ""
-  current_move = ""        # current move text
-  current_comment = ""     # current comment text
-  current_move_number = 0
-  comment_depth = 0        # level of nested comments
-  BUFSIZ = 8192
-  text_buffer = Array{UInt8}(undef, BUFSIZ)
-  while !eof(f)
-    bytes_read = readbytes!(f, text_buffer, BUFSIZ)
-    for k in 1:bytes_read
-      if text_buffer[k] == '\n'
-        println("RET")
+  ngamesread = 0
+  newgame = false
+  current_header = Dict{String,String}()
+  current_movetext = ""
+  for l in lines
+    if length(l) == 0
+      println("BETWEEN> ", l)
+      if length(current_movetext) > 0 && length(current_header) > 0 # finished a game
+        moves = parse_movetext(current_movetext)
+        g = Game(current_header, moves)
+        ngamesread += 1
+        println("PUSHING> ", g)
+        if ngamesread <= length(games)
+          games[ngamesread] = g
+        else
+          push!(games, g)
+        end
+        newgame = true
       end
-      if state == STATE_MOVE_NUMBER
-        if text_buffer[k] == '.' # end of move number
-          prevstate = state
-          state = STATE_PERIOD
-          # TODO: add this in: current_move_number = parse(Int, text_buffer[startidx:k-1])
-        elseif text_buffer[k] == '/' # reached a drawn result
-          break  # TODO: use this for validation
-        elseif text_buffer[k] == '-' # reached a decisive result
-          break  # TODO: use this for validation
-        elseif text_buffer[k] == '['
-          prevstate = STATE_NULL
-          state = STATE_HEADER_TAG
-          startidx = k+1
-        end
-      elseif state == STATE_HEADER_TAG
-        if text_buffer[k] == ' '   # end of header tag
-          current_header_tag = text_buffer[startidx:k-1]
-          prevstate = STATE_HEADER_TAG
-          state = STATE_HEADER_VALUE
-          startidx = -1
-        end
-      elseif state == STATE_HEADER_VALUE
-        if text_buffer[k] == '"'
-          if startidx == -1
-            startidx = k+1
-          else
-            current_header_value = text_buffer[startidx:k-1]
-            headers[current_header_tag] = current_header_value
-          end
-        elseif text_buffer[k] == ']'
-          prevstate = state
-          state = STATE_MOVE_NUMBER
-        end
-      elseif state == STATE_PERIOD
-        if text_buffer[k] == '.'  # must precede a black move
-          sidetomove = SIDE_BLACK
-        elseif text_buffer[k] == '{'  # comment next
-          prevstate = state
-          state = STATE_COMMENT
-          comment_depth = 1
-          startidx = k+1
-        elseif text_buffer[k] == ' '
-          prevstate = state
-          state = STATE_SPACE
-        elseif text_buffer[k] != ' '     # move next
-          if current_move != ""
-            push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
-            sidetomove = 1 - sidetomove
-            current_comment = ""
-            current_move = ""
-          end
-          prevstate = STATE_PERIOD
-          state = STATE_MOVE
-          startidx = k
-        end
-      elseif state == STATE_SPACE
-        if text_buffer[k] == ' '
-          continue  # skip spaces, not important for decisions
-        elseif text_buffer[k] == '{'   # start of comment string
-          comment_depth = 1
-          startidx = k+1
-          prevstate = state
-          state = STATE_COMMENT
-        elseif text_buffer[k] == '$'
-          startidx = k+1
-          prevstate = state
-          state = STATE_NAG
-        elseif text_buffer[k] == '*' # indeterminate result, all other results will be during STATE_MOVE_NUMBER
-          break # done processing
-        elseif isdigit(text_buffer[k]) # start of a move number
-          prevstate = state
-          state = STATE_MOVE_NUMBER
-          startidx = k
-        else # text_buffer[k] != '{'   # start of a move
-          if current_move != ""
-            push!(movelist, Move(move_number, sidetomove, current_move, current_comment))
-            sidetomove = 1 - sidetomove
-            current_comment = ""
-            current_move = ""
-          end
-          prevstate = state
-          state = STATE_MOVE
-          startidx = k
-        end
-      elseif state == STATE_MOVE
-        if text_buffer[k] == ' ' || text_buffer[k] == '\n'
-          prevstate = state
-          state = STATE_SPACE
-          current_move = chomp(text_buffer[startidx:k-1])
-          sidetomove = 1 - sidetomove
-        end
-      elseif state == STATE_COMMENT
-        if text_buffer[k] == '}' # end of comment string
-          comment_depth -= 1
-        elseif text_buffer[k] == '{'
-          comment_depth += 1
-        end
-        if comment_depth == 0
-          current_comment = text_buffer[startidx:k-1]
-          state = STATE_SPACE
-        end
-      elseif state == STATE_NAG
-        if text_buffer[k] == ' '
-          current_nag = parse(Int, text_buffer[startidx:k-1])
-          prevstate = state
-          state = STATE_SPACE
-        end
-      else
-        #@info "UNHANDLED STATE" state k text_buffer[k] prevstate current_move current_comment
-      end
+    elseif l[1] == '['
+      k, v = parse_header_line(l)
+      println("HEADER> ", (k,v))
+      current_header[k] = v
+    else
+      current_movetext *= l
+      #println("MOVETEXT> ", l)
+    end
+    if newgame
+      current_movetext = ""
+      current_header = Dict{String,String}()
+      newgame = false
     end
   end
-  return games[1:ngames]
+  return games[ngamesread]
 end
+
+
+function parse_header_line(line::String)
+  # parse a PGN header line and return a (key,val) tuple
+  k1 = findfirst("[", line)[1] + 1
+  k2 = findnext(" ", line, k1)[1] - 1
+  v1 = findnext("\"", line, k2)[1] + 1
+  v2 = findnext("\"", line, v1)[1] - 1
+  return (line[k1:k2], line[v1:v2])
+end
+
+function parse_movetext(S::String)
+  # parse a line of movetext
+  # assumes <= 100 moves per line
+  moves = Move[]
+  state = STATE_UNKNOWN
+  current_move = ""
+  current_comment = ""
+  k = 1
+  while k < length(S)
+    if state == STATE_UNKNOWN
+      if isdigit(S[k])
+        state = STATE_MOVE_NUMBER
+      elseif S[k] == '{'
+        state = STATE_COMMENT
+      elseif S[k] != ' '
+        state = STATE_MOVE
+      else  # skip everything else
+        k += 1
+      end
+    elseif state == STATE_MOVE_NUMBER
+      k += 1
+      while true
+        if isdigit(S[k]) || S[k] == '.'
+          k += 1
+        elseif S[k] == '-' || S[k] == '/'
+          state = STATE_RESULT
+          break
+        else
+          state = STATE_MOVE  # replace with ischar?
+          break
+        end
+        if k > length(S)
+          state = STATE_RESULT
+          break
+        end
+      end
+    elseif state == STATE_COMMENT
+      k += 1
+      comment_depth = 1
+      startidx = k
+      while comment_depth > 0
+        if S[k] == '{'
+          comment_depth += 1
+        elseif S[k] == '}'
+          comment_depth -= 1
+        end
+        k += 1
+      end
+      current_comment = S[startidx:k-2]
+      state = STATE_UNKNOWN
+    elseif state == STATE_MOVE
+      if current_move != ""
+        push!(moves, Move(current_move, current_comment))
+        current_comment = ""
+      end
+      startidx = k
+      while true
+        if S[k] == ' '
+          current_move = S[startidx:k-1]
+          break
+        elseif k >= length(S)
+          current_move = S[startidx:k]
+          break
+        else
+          k += 1
+        end
+      end
+      state = STATE_UNKNOWN
+    elseif state == STATE_NAG
+      @info "NAG NOT IMPLEMENTED YET"
+    elseif state == STATE_RESULT
+      break
+    else
+      @info "UNHANDLED STATE" state S k moves
+    end
+  end
+  if current_move != ""
+    push!(moves, Move(current_move, current_comment))
+  end
+  return moves
+end
+
 
 """
 headerstring(g)
@@ -262,6 +275,9 @@ function movestring(g::Game; line=80, comments=true)
   join(output, "")
 end
 
+
+resultstring(g::Game) = g.header["Result"]
+
 function Base.repr(mime, m::Move)
   if m.side == SIDE_WHITE && m.comment == ""
     return "$(m.number)."*m.san
@@ -278,7 +294,8 @@ function Base.show(io::IO, g::Game)
 end
 function Base.println(g::Game)
     Base.println(headerstring(g))
-    Base.println(movestring(g), "\n")
+    Base.print(movestring(g), " ")
+    Base.println(resultstring(g), "\n")
 end
 
 plycount(g::Game) = length(g.moves)
@@ -318,13 +335,13 @@ end
 function datequery(g::Game, key::String)
   y, m, d = split(query(g, key),'.')
   if occursin("?", y)
-    return Date()
+    return Dates.Date(1970,1,1)
   elseif occursin("?", m)
-    return Date(parse(Int,y))
+    return Dates.Date(parse(Int,y))
   elseif occursin("?", d)
-    return Date(parse(Int,y), parse(Int,m))
+    return Dates.Date(parse(Int,y), parse(Int,m))
   else
-    return Date(parse(Int,y), parse(Int,m), parse(Int,d))
+    return Dates.Date(parse(Int,y), parse(Int,m), parse(Int,d))
   end
 end
 
@@ -450,78 +467,6 @@ const STATE_NEWGAME = 2
 
 isblank(line) = all(isspace, line)
 
-"""
-readpgn(filename; [header=true, moves=true, verbose=false])
-
-Read games from PGN file `filename` and returns an array of `Game`
-objects.
-
-If `header` or `moves` are set to false, they will, respectively, be
-ignored. This can be used to decrease memory consumption when you don't
-need the full game.
-"""
-function readpgn_old(pgnfilename; header=true, moves=true, verbose=false,
-    prealloc=true)
-  f = open(pgnfilename,"r")
-  if prealloc
-    NGAMESMAX = div(filesize(pgnfilename), 500)
-  else
-    NGAMESMAX = 1
-  end
-  games = Vector{Game}(undef, NGAMESMAX)
-  NMOVESMAX = 512
-  move_text_buffer = Vector{String}(undef, NMOVESMAX)
-  h = Dict{String,String}()
-  ngames = 0
-  nmoves = 0
-  state = STATE_NEWGAME
-  while !eof(f)  # TODO: read into buffer
-    l = readline(f,keep=false)
-    if occursin(r"^\[", l)   # header line
-      state = STATE_HEADER
-      fields = split(l,'\"')
-      key = fields[1][2:end-1]
-      val = fields[2]
-      if header
-        h[key] = val
-      end
-    elseif isblank(l) && state == STATE_HEADER
-      state = STATE_MOVES  # TODO: allow for multiple blank lines after header?
-    elseif !isblank(l) && state == STATE_MOVES && moves
-      nmoves += 1
-      move_text_buffer[nmoves] = l
-      #push!(m, l) # can't chomp because of ; and \n comment delimiters
-    elseif isblank(l) && state == STATE_MOVES
-      g = Game(h, join(move_text_buffer[1:nmoves], " "))
-      ngames += 1
-      if ngames <= NGAMESMAX
-        games[ngames] = g
-      else
-        @info "overflow!" ngames
-        push!(games, g)
-      end
-      if verbose
-        @printf "\r%d" ngames
-      end
-      state = STATE_NEWGAME
-    end
-    if state == STATE_NEWGAME
-      nmoves = 0
-      h = Dict{String,String}()
-    end
-  end
-  close(f)
-  if state == STATE_MOVES
-    g = Game(h, join(move_text_buffer[1:nmoves], " "))
-    ngames += 1
-    if ngames <= NGAMESMAX
-      games[ngames] = g
-    else
-      push!(games, g)
-    end
-  end
-  return games[1:ngames]
-end
 
 """
 sortpgnfile(filename)
@@ -570,9 +515,9 @@ end
 
 function main()
   games = readpgn(ARGS[1], verbose=true)
-  println("Read $(size(games)) games.")
+  println("Read $(length(games)) games.")
   for g in games
-    println(g)
+    show(g)
   end
 end
 
