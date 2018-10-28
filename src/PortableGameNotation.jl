@@ -14,9 +14,10 @@ export readpgn, writepgn, Game, event, site, date, round, white, black, result,
 
 struct Move
   san::String
-  #nag::UInt8
+  nag::UInt8
   comment::String
 end
+Move(san::String, comment::String) = Move(san, 0, comment)
 struct Game
   header::Dict{String, String}
   moves::Array{Move,1}
@@ -69,7 +70,6 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   f = open(pgnfilename,"r")
   lines = readlines(f)
   close(f)
-  println("Readfile")
   if prealloc
     games = Vector{Game}(undef, div(filesize(pgnfilename), 500)) # guess
   else
@@ -80,7 +80,6 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
   current_header = DEFAULT_HASH
   current_movetext = ""
   for (j, l) in enumerate(lines)
-     #c:wqprintln("LINE> ", l)
     if length(l) == 0
       if length(current_movetext) > 0 && length(current_header) > 0 # finished a game
         newgame = true
@@ -95,6 +94,7 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
       moves = parse_movetext(current_movetext)
       g = Game(current_header, moves)
       ngamesread += 1
+      print("\r", ngamesread)
       if ngamesread <= length(games)
         games[ngamesread] = g
       else
@@ -110,7 +110,7 @@ function readpgn(pgnfilename::String; verbose=true, skim=false, prealloc=true)
 end
 
 
-function parse_header_line(line::String)
+function parse_header_line(line::String)::Tuple{String,String}
   # parse a PGN header line and return a (key,val) tuple
   k1 = findfirst("[", line)[1] + 1
   k2 = findnext(" ", line, k1)[1] - 1
@@ -119,22 +119,25 @@ function parse_header_line(line::String)
   return (line[k1:k2], line[v1:v2])
 end
 
-function parse_movetext(S::String)
+function parse_movetext(txt::String)::Array{Move,1}
   # parse a line of movetext
   # assumes <= 100 moves per line
   nmoves = 0
   state = STATE_UNKNOWN
   current_move = ""
+  current_nag = 0
   current_comment = ""
   k = 1
-  try
-  while k < length(S)
+  #try
+  while k < length(txt)
     if state == STATE_UNKNOWN
-      if isdigit(S[k])
+      if isdigit(txt[k])
         state = STATE_MOVE_NUMBER
-      elseif S[k] == '{'
+      elseif txt[k] == '{'
         state = STATE_COMMENT
-      elseif S[k] != ' '
+      elseif txt[k] == '$'
+        state = STATE_NAG
+      elseif txt[k] != ' '
         state = STATE_MOVE
       else  # skip everything else
         k += 1
@@ -142,16 +145,16 @@ function parse_movetext(S::String)
     elseif state == STATE_MOVE_NUMBER
       k += 1
       while true
-        if isdigit(S[k]) || S[k] == '.'
+        if isdigit(txt[k]) || txt[k] == '.'
           k += 1
-        elseif S[k] == '-' || S[k] == '/'
+        elseif txt[k] == '-' || txt[k] == '/'
           state = STATE_RESULT
           break
         else
           state = STATE_MOVE  # replace with ischar?
           break
         end
-        if k > length(S)
+        if k > length(txt)
           state = STATE_RESULT
           break
         end
@@ -161,28 +164,28 @@ function parse_movetext(S::String)
       comment_depth = 1
       startidx = k
       while comment_depth > 0
-        if S[k] == '{'
+        if txt[k] == '{'
           comment_depth += 1
-        elseif S[k] == '}'
+        elseif txt[k] == '}'
           comment_depth -= 1
         end
         k += 1
       end
-      current_comment = S[startidx:k-2]
+      current_comment = txt[startidx:k-2]
       state = STATE_UNKNOWN
     elseif state == STATE_MOVE
       if current_move != ""
         nmoves += 1
-        move_scratch[nmoves] = Move(current_move, current_comment)
+        move_scratch[nmoves] = Move(current_move, current_nag, current_comment)
         current_comment = ""
       end
       startidx = k
       while true
-        if S[k] == ' '
-          current_move = S[startidx:k-1]
+        if txt[k] == ' '
+          current_move = txt[startidx:k-1]
           break
-        elseif k >= length(S)
-          current_move = S[startidx:k]
+        elseif k >= length(txt)
+          current_move = txt[startidx:k]
           break
         else
           k += 1
@@ -190,20 +193,25 @@ function parse_movetext(S::String)
       end
       state = STATE_UNKNOWN
     elseif state == STATE_NAG
-      @info "NAG NOT IMPLEMENTED YET"
+      k += 1
+      startidx = k
+      while txt[k] != ' '
+        k += 1
+        current_nag = parse(Int, txt[startidx:k])
+      end
     elseif state == STATE_RESULT
       break
     else
-      @info "UNHANDLED STATE" state S k moves
+      @info "UNHANDLED STATE" state txt k moves
     end
   end
-  catch BoundsError
-    @info "BoundsError" length(S) k S
-    exit(1)
-  end
+  #catch BoundsError
+    #@info "BoundsError" length(txt) k txt
+    #exit(1)
+  #end
   if current_move != ""
     nmoves += 1
-    move_scratch[nmoves] = Move(current_move, current_comment)
+    move_scratch[nmoves] = Move(current_move, current_nag, current_comment)
   end
   return move_scratch[1:nmoves]
 end
@@ -515,9 +523,9 @@ end
 function main()
   games = readpgn(ARGS[1], verbose=true)
   println("Read $(length(games)) games.")
-  #cj.for g in games
-    #cj.show(g)
-  #cj.end
+  #for g in games
+  #  show(g)
+  #end
 end
 
 PROGRAM_FILE == "PortableGameNotation.jl" && main()
