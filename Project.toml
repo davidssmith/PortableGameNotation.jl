@@ -1,5 +1,7 @@
 name = "PortableGameNotation"
 uuid = "741eb8d8-1b8a-5b1d-9526-a7052a967f3d"
+version = "0.0.3"
+author = ["David S. Smith <david.smith@gmail.com>"]
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
